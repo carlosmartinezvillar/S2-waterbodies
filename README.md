@@ -1,2 +1,2 @@
-# S2-UNET
-A U-Net-like model for Sentinel-2 data processing
+# S2 Waterbodies
+UNet and Transformer-like models for segmentation of surface waterbodies in Sentinel-2 imagery

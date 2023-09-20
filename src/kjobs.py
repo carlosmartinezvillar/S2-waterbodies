@@ -7,4 +7,4 @@ N_JOBS = 25
 
 #launch via kubectl
 for job in range(N_JOBS):
-	pass
+	passkubectl create -f job_template.yml

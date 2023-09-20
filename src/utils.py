@@ -40,34 +40,34 @@ CFG_DIR = "../cfg/"
 
 ####################################################################################################
 class ConfusionMatrix():
-	'''
+	"""
 	Y and T are taken to be two arrays, each of matching NxM dimensions, corresponding to the       
 	predicted values and the true labels in a class. Values of 1 or true in Y are the outputs of the
 	network (predicted class), and values of 1 or true in T are pixels belonging to that class. The 
 	confusion matrix of the 2 class problem is set as:
 
-	           predicted
-	             1   0
-	          +----+----+
-	       1  | TP | FN |
-	actual    +----+----+
-	       0  | FP | TN |
-	          +----+----+
+		           predicted
+		             T   F
+		          +----+----+
+		       T  | TP | FN |
+		actual    +----+----+
+		       F  | FP | TN |
+		          +----+----+
 
 	For the case of 3 classes, a single confusion matrix is analagously set so that it includes all 
 	three classes in one matrix. The diagonal always corresponds to the true positives of a class      
 	but FNs, FPs, and TNs vary. For example, for class 0 the resulting confusion matrix is 
 
-	             predicted
-	            0    1    2
-	          +----+----+----+
-	       0  | TP | FN | FN |
-	          +----+----+----+
-	actual 1  | FP | TN | TN |
-	          +----+----+----+
-	       2  | FP | TN | TN |
-	          +----+----+----+
-	'''
+		             predicted
+		            0    1    2
+		          +----+----+----+
+		       0  | TP | FN | FN |
+		          +----+----+----+
+		actual 1  | FP | TN | TN |
+		          +----+----+----+
+		       2  | FP | TN | TN |
+		          +----+----+----+
+	"""
 
 	def __init__(self, n_classes=2):
 		self.n_classes = n_classes
@@ -96,18 +96,14 @@ class ConfusionMatrix():
 			# self.FN += fn_mask.sum()
 			# self.TN += tn_mask.sum()
 			#yet another way...
-			# self.M[0,0] += ((T==0) & (Y==0)).sum()
-			# self.M[0,1] += ((T==0) & (Y==1)).sum()
-			# self.M[1,0] += ((T==1) & (Y==0)).sum()			
-			# self.M[1,1] += ((T==1) & (Y==1)).sum()
-			# self.TP = self.M[0,0]
-			# self.FN = self.M[0,1]
-			# self.FP = self.M[1,0]
-			# self.TN = self.M[1,1]
 			self.TP += ((T==1) & (Y==1)).sum()
 			self.FN += ((T==1) & (Y==0)).sum()
 			self.FP += ((T==0) & (Y==1)).sum()			
 			self.TN += ((T==0) & (Y==0)).sum()
+			self.M[0,0] = self.TP
+			self.M[0,1] = self.FN
+			self.M[1,0] = self.FP
+			self.M[1,1] = self.TN
 
 			print(self.TP,self.FN)
 			print(self.FP,self.TN)
