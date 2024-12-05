@@ -1,14 +1,34 @@
 import os
 import numpy as np
 import torch
+import torchvision
 import random
 import time
-import sys
+from tqdm import tqdm
+import argparse
+
+import utils
+import model
+import dload
+
+####################################################################################################
+# SET GLOBAL VARS FROM ENV ET CETERA.
+####################################################################################################
+cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
+ROOT = '../'
+LOG_DIR = ROOT + 'log/'
+MDL_DIR = ROOT + 'mod/'
+HP = {}
+
+__spec__ = None # DEBUG with tqdm/temp.
 
 ####################################################################################################
 # FILE PATHS
 ####################################################################################################
-LOG_DIR = "../log/"
+ROOT    = "../"
+LOG_DIR = ROOT + "log/"
+MDL_DIR = ROOT + "mod/"
+
 
 ####################################################################################################
 # FUNCTIONS
@@ -28,62 +48,80 @@ LOG_DIR = "../log/"
 # 		scaler.step(optimizer)
 # 		scaler.update()
 
-def train(model,loss_fn,optimizer,dataloader,device=0):
-	model.train()
-	sum_loss   = 0
 
-	for batch_id, (X,T) in enumerate(train_loader):
-		#Batch to gpu
-		X,T = X.to(device,non_blocking=True),T.to(device,non_blocking=True)
+def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
-		#Fwd pass
-		Y    = model(X)
-		loss = loss_fn(Y,T)
+	N_tr = len(dataloaders['training'].dataset)
+	N_va = len(dataloaders['validation'].dataset)
+	best_acc   = 0.0
+	best_epoch = 0
+	total_start_time = time.time()
 
-		#Clear previous and compute new gradients
-		optimizer.zero_grad()
-		loss.backward()
+	for epoch in range(n_epochs):
+		M_tr = utils.ConfusionMatrix(n_classes=2)
+		M_va = utils.ConfusionMatrix(n_classes=2)
+		epoch_start_time = time.time()
+		print(f'\nEpoch {epoch}/{n_epochs-1}')
+		print('-'*80)
 
-		#Update weights
-		optimizer.step()
+		############################################################
+		# TRAINING
+		############################################################		
+		t = tqdm(total=len(dataloaders['training']),ncols=80)
 
-		sum_loss += loss.item()	
+		loss_sum    = 0.0
+		samples_ran = 0
+		model.train()
 
-		#Log training for debugging
+		for X,T in dataloaders['training']
 
-	return sum_loss
+			X = X.to(cuda_device)
+			T = T.to(cuda_device)
 
-def validate(model,loss_fn,optimizer,dataloader,device=0):
-	model.eval()
-	sum_loss = 0
+			with torch.set_grad_enabled(True):
+				outputs = model(X)
+				Y       = torch.max()
 
-	for batch_id, (X,T) in enumerate(valid_loader):
-		#Batch to GPU
-		X, T = X.to(device,non_blocking=True), T.to(device,non_blockin=True)
+			loss_sum = loss.item() * X.size(0)
+			samples_ran += X.size(0)
+			M_tr.update(Y.detach().cpu().numpy())
 
-		#Fwd pass
+			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
+			t.update(1)
+
+		t.close()
+		loss_tr = loss_sum / N_tr
+		print(f'[T] Loss: {loss_tr:.4f}')
+
+		if scheduler is not None:
+			scheduler.step()
+
+		############################################################
+		# VALIDATION
+		############################################################
+		t = tqdm(total=len(dataloaders['validation']),ncols=80)
+
+		loss_sum    = 0.0
+		samples_ran = 0
+		model.eval()
+
+		for X,T in dataloaders['validation']:
+
+			X = X.to(cuda_device)
+			T = T.to(cuda_device)
 
 
-		
-		#Update conf. matrix counts
 
-	#log write to file
+			loss_sum = loss.item() * X.size(0)
+			samples_ran += X.size(0)
+			M_va.update(Y.detach().cpu().numpy(),T.detach.cpu().numpy())
 
-	#loss
-	#prec recall iou
+			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
+			t.update(1)
 
-	#check for best model
+		t.close()
 
-
-
-
-
-def train_and_validate(model, tr_dloader, va_dloader, optimizer, loss_fn):
-
-	for epoch in range epochs:
-		
-	#TO DO
-
+		loss_va = loss_sum / N_va
 
 if __name__ == "__main__":
 	pass

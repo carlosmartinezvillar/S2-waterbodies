@@ -54,7 +54,7 @@ class ConvBlock(torch.nn.Module):
 
 
 class BaseUNet(torch.nn.Module):
-    def __init__(self, in_channels=1, out_channels=1):
+    def __init__(self, in_channels=3, out_channels=1):
         super(BaseUNet, self).__init__()
         
         # ENCODER
