@@ -75,27 +75,38 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		for X,T in dataloaders['training']
 
-			X = X.to(cuda_device)
-			T = T.to(cuda_device)
+			X = X.to(cuda_device,non_blocking=True)
+			T = T.to(cuda_device,non_blocking=True)
 
+			# forward-pass
 			with torch.set_grad_enabled(True):
-				outputs = model(X)
-				Y       = torch.max()
+				output = model(X)
+				loss   = loss_fn(output,T)
 
+			# backprop
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+
+			# metrics
 			loss_sum = loss.item() * X.size(0)
-			samples_ran += X.size(0)
-			M_tr.update(Y.detach().cpu().numpy())
+			samples_ran += X.size(0)			
+			Y = output.detach().cpu().numpy().max(axis=1)
+			T = T.detach().cpu().numpy()
+			M_tr.update(Y,T)
 
+			# update bar
 			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
 			t.update(1)
-
+		
 		t.close()
+		# log training
 		loss_tr = loss_sum / N_tr
-		print(f'[T] Loss: {loss_tr:.4f}')
+		print(f'[T] loss: {loss_tr:.4f} | acc: {M_tr.acc():.4f}')
 
 		if scheduler is not None:
 			scheduler.step()
-
+		
 		############################################################
 		# VALIDATION
 		############################################################
@@ -107,21 +118,62 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		for X,T in dataloaders['validation']:
 
-			X = X.to(cuda_device)
-			T = T.to(cuda_device)
+			X = X.to(cuda_device,non_blocking=True)
+			T = T.to(cuda_device,non_blocking=True)
 
+			with torch.set_grad_enabled(False):
+				output = model(X)
+				loss   = loss_fn(output,T)
+				_,Y    = torch.max(output,1)
 
-
+			#metrics
 			loss_sum = loss.item() * X.size(0)
 			samples_ran += X.size(0)
-			M_va.update(Y.detach().cpu().numpy(),T.detach.cpu().numpy())
+			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
 
 			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
 			t.update(1)
 
 		t.close()
-
+		# log validation
 		loss_va = loss_sum / N_va
+		print(f'[V] loss: {loss_va:.4f} | acc: {M_va.acc():.4f}')
+
+
+		# LOG EPOCH
+		###########
+		epoch_time = time.time() - epoch_start_time
+		print(f'Epoch time: {epoch_time:.2f}')
+		epoch_log = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
+		epoch_logger.log(epoch_log)
+
+		# SAVE MODEL
+		epoch_metric = M_va.iou()
+		if best_acc < epoch_metric:
+			best_acc = epoch_metric
+			best_epoch = epoch
+			utils.save_checkpoint(model,optimizer,epoch,loss_tr,loss_va,best=True)
+
+		print(f'\nBest validation IoU: {best_acc:.4f}')
+		total_time = time.time() - total_start_time
+		print(f'\nTotal time: {total_time:.2f}')
+
 
 if __name__ == "__main__":
+
+	HP = {
+		'LEARNING_RATE': 0.01,
+		'BATCH': 16,
+		'OPTIM': 'adam',
+		'DOWNSAMPLING': 'maxpool',
+		'WEIGHTS': 'random',
+		'RESCONNECTIONS': 0,
+		'LAYERSPERBLOCK': 2,
+		'DEPTH': 0,
+		'LOSS': 'BASIC_CE'
+	}
+
+	net = model.BaseUNet()
+
+
 	pass
