@@ -20,7 +20,7 @@ LOG_DIR = ROOT + 'log/'
 MDL_DIR = ROOT + 'mod/'
 HP = {}
 
-__spec__ = None # DEBUG with tqdm/temp.
+__spec__ = None # DEBUG with tqdm -- temp.
 
 ####################################################################################################
 # FILE PATHS
@@ -55,6 +55,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	N_va = len(dataloaders['validation'].dataset)
 	best_acc   = 0.0
 	best_epoch = 0
+	logger_tr = utils.Logger(f'{ROOT_DIR}/log/train_{model.model_id}_',)
+	logger_va = 
+
 	total_start_time = time.time()
 
 	for epoch in range(n_epochs):

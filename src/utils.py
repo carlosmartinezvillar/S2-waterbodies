@@ -146,6 +146,8 @@ class ConfusionMatrix():
 		print(self.table)
 		print(type(self.table))
 
+
+####################################################################################################
 def IoU(Y,T,n_classes=2):
 	'''
 	2-class	
@@ -189,6 +191,17 @@ def load_checkpoint(path,model,optim):
 
 def randomize_hyperparameters(n=1):
 	HP = {}
+
+	#same as a grid search but randomize the choice of parameters
+
+	return HP
+
+
+def sequence_hyperparameters():
+	HP = {}
+
+	#write a sequential list that can be used for grid search
+
 	return HP
 
 
