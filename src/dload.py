@@ -15,8 +15,8 @@ import utils
 ################################################################################
 class SentinelDataset(torch.utils.data.Dataset):
 	def __init__(self,chip_dir,n_bands=3):
-		self.root = chip_dir
-		self.ids  = 
+		self.dir = chip_dir
+		self.ids = []
 
 		if n_bands == 3:
 			band_suffixes = ['B02','B02','B03']
@@ -30,12 +30,22 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 	def __getitem__(self,idx):
 		# one way
-		b = Image.open(f'{self.root}/{self.ids[i]}_B02.tif')
-		g = Image.open(f'{self.root}/{self.ids[i]}_B03.tif')
-		r = Image.open(f'{self.root}/{self.ids[i]}_B04.tif')
-		n = Image.open(f'{self.root}/{self.ids[i]}_B08.tif')	
+		b = Image.open(f'{self.dir}/{self.ids[i]}_B02.tif')
+		g = Image.open(f'{self.dir}/{self.ids[i]}_B03.tif')
+		r = Image.open(f'{self.dir}/{self.ids[i]}_B04.tif')
+		n = Image.open(f'{self.dir}/{self.ids[i]}_B08.tif')	
 
 		t = np.array(Image.open(f'{self.root}/{self.ids[i]}_LBL.tif').convert('L'))
 		t = (t >> 7).astype(np.float32)
 
 		return
+
+'''
+testing, validation split:
+Test dataset.
+1. Choose 2/6 UTM zones at random, without replacement.
+2. Choose a tile with (a number of raster below the median) at random for each of the two UTM zones.
+Validation dataset
+3. Off remaining set, choose 2/6 UTM zones at random, without replacement.
+4. Choose a tile at random for each of the two UTM zones. 
+'''
