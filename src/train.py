@@ -15,9 +15,7 @@ import dload
 # SET GLOBAL VARS FROM ENV ET CETERA.
 ####################################################################################################
 cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
-ROOT = '../'
-LOG_DIR = ROOT + 'log/'
-MDL_DIR = ROOT + 'mod/'
+
 HP = {}
 
 __spec__ = None # DEBUG with tqdm -- temp.
@@ -25,30 +23,12 @@ __spec__ = None # DEBUG with tqdm -- temp.
 ####################################################################################################
 # FILE PATHS
 ####################################################################################################
-ROOT    = "../"
-LOG_DIR = ROOT + "log/"
-MDL_DIR = ROOT + "mod/"
-
+LOG_DIR = '../log'
+MDL_DIR = '../mod'
 
 ####################################################################################################
 # FUNCTIONS
 ####################################################################################################
-# def train_mixed_precision(model,loss_fn,optimizer,dataloader,device=0):
-# 	model.train()
-# 	sum_loss = 0
-# 	for batch_idx,(X,T) in enumerate(dataloader):
-# 		X,T = X.cuda(device,non_blocking=True), T.cuda(device,non_blocking=True)
-# 		optimizer.zero_grad()
-# 		with torch.cuda.amp.autocast(enabled=True,dtype=toch.float16):
-# 			Y = model(X)
-# 			loss = loss_fn(Y,T)
-# 		scaler.scale(loss).backward()
-# 		scaler.unscale_(optimizer) #unscale for loss calc at fp32
-# 		sum_loss += loss.item()
-# 		scaler.step(optimizer)
-# 		scaler.update()
-
-
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
 	N_tr = len(dataloaders['training'].dataset)
@@ -164,6 +144,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
+
+
 	HP = {
 		'LEARNING_RATE': 0.01,
 		'BATCH': 16,
@@ -180,3 +162,23 @@ if __name__ == "__main__":
 
 
 	pass
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+# def train_mixed_precision(model,loss_fn,optimizer,dataloader,device=0):
+# 	model.train()
+# 	sum_loss = 0
+# 	for batch_idx,(X,T) in enumerate(dataloader):
+# 		X,T = X.cuda(device,non_blocking=True), T.cuda(device,non_blocking=True)
+# 		optimizer.zero_grad()
+# 		with torch.cuda.amp.autocast(enabled=True,dtype=toch.float16):
+# 			Y = model(X)
+# 			loss = loss_fn(Y,T)
+# 		scaler.scale(loss).backward()
+# 		scaler.unscale_(optimizer) #unscale for loss calc at fp32
+# 		sum_loss += loss.item()
+# 		scaler.step(optimizer)
+# 		scaler.update()

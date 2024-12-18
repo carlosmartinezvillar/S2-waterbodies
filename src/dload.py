@@ -23,7 +23,7 @@ class SentinelDataset(torch.utils.data.Dataset):
 		elif n_bands == 4:
 			band_suffixes = ['B02','B02','B03','B08']
 		else:
-			print("")
+			raise ValueError("Incorrect number of bands in dataloader.")
 
 	def __len__(self):
 		return len(self.ids)
@@ -33,8 +33,11 @@ class SentinelDataset(torch.utils.data.Dataset):
 		b = Image.open(f'{self.dir}/{self.ids[i]}_B02.tif')
 		g = Image.open(f'{self.dir}/{self.ids[i]}_B03.tif')
 		r = Image.open(f'{self.dir}/{self.ids[i]}_B04.tif')
-		n = Image.open(f'{self.dir}/{self.ids[i]}_B08.tif')	
-
+		if self.bands == 4:
+			n = Image.open(f'{self.dir}/{self.ids[i]}_B08.tif')
+			arr = r+g+b+n
+		else:
+			arr = r+g+b	
 		t = np.array(Image.open(f'{self.root}/{self.ids[i]}_LBL.tif').convert('L'))
 		t = (t >> 7).astype(np.float32)
 
@@ -49,3 +52,6 @@ Validation dataset
 3. Off remaining set, choose 2/6 UTM zones at random, without replacement.
 4. Choose a tile at random for each of the two UTM zones. 
 '''
+
+if __name__ == '__main__':
+	pass

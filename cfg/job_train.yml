@@ -1,98 +1,74 @@
 apiVersion: batch/v1
 kind: Job
-
 metadata:
-  name: job0
-
+  name: train-job
 spec:
-  backoffLimit: 0
+  backoffLimit: 1
   template:
     spec:
+
+4      containers:
+        - name: trainbox
+          image: docker.io/cimartinezvillar/dcnn-pytorch:cuda11.7runt-ubuntu22.04
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 32Gi
+              cpu: 8
+              nvidia.com/gpu: 1
+            requests:
+              memory: 32Gi
+              cpu: 8
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - mountPath: /cache
+              name: cache-vol
+          command: ["/bin/sh","-c"]
+          args:
+          - python3 /S2-waterbodies/src/train.py --data-dir /cache/chips;
+
+      initContainers:
+        - name: copybox
+          image: docker.io/cimartinezvillar/geo:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 16Gi
+              cpu: 2
+            requests:
+              memory: 16Gi
+              cpu: 2
+          volumeMounts:
+            - mountPath: /cache
+              name: cache-vol
+            - mountPath: /zipped_chips
+              name: chips-vol
+          command: ["/bin/sh","-c"]
+          args:
+          - cp zipped_chips/chips.zip /cache;
+            unzip /cache/chips.zip -d /cache/chips;
+            git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
+
+      volumes:
+      - name: cache-vol
+        emptyDir: {}
+          sizeLimit: 50G
+      - name: chips-vol
+        persistentVolumeClaim:
+          claimName: lake-chips-zipped
+
       restartPolicy: Never
-      containers:
-
-        - name: c0
-          image: gitlab-registry.nrp-nautilus.io/martinezci/cuda11.7base-ubuntu20.04:latest
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-            requests:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-          env:
-            - name: CONTAINER_ID
-              value: cont0
-            - name: JOB_ID
-              value: job0
-          command: ["python3","test_script.py"]
-
-        - name: c1
-          image: gitlab-registry.nrp-nautilus.io/martinezci/cuda11.7base-ubuntu20.04:latest        
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-            requests:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-          env:
-            - name: CONTAINER_ID
-              value: cont1
-            - name: JOB_ID
-              value: job0  
-          command: ["python3","test_script.py"]
-
-        - name: c2
-          image: gitlab-registry.nrp-nautilus.io/martinezci/cuda11.7base-ubuntu20.04:latest        
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-            requests:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-          env:
-            - name: CONTAINER_ID
-              value: cont2
-            - name: JOB_ID
-              value: job0      
-          command: ["python3","test_script.py"]
-
-        - name: c3
-          image: gitlab-registry.nrp-nautilus.io/martinezci/cuda11.7base-ubuntu20.04:latest        
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-            requests:
-              memory: 8Gi
-              cpu: 2
-              nvidia.com/gpu: 1
-          env:
-            - name: CONTAINER_ID
-              value: cont3
-            - name:JOB_ID
-              value: job0
-          command: ["python3","test_script.py"]
 
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  - key: nvidia.com/gpu.product
-                    operator: In
-                    values:
-                      - NVIDIA-GeForce-RTX-3090
+                - key: topology.kubernetes.io/region
+                  operator: In
+                  values:
+                  - us-central  
+                - key: nvidia.com/gpu.product
+                  operator: In
+                  values:
+                  - NVIDIA-GeForce-RTX-3090
