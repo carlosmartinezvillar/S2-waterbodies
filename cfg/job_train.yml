@@ -3,11 +3,11 @@ kind: Job
 metadata:
   name: train-job
 spec:
-  backoffLimit: 1
+  backoffLimit: 0
   template:
     spec:
 
-4      containers:
+      containers:
         - name: trainbox
           image: docker.io/cimartinezvillar/dcnn-pytorch:cuda11.7runt-ubuntu22.04
           imagePullPolicy: IfNotPresent
@@ -23,6 +23,8 @@ spec:
           volumeMounts:
             - mountPath: /cache
               name: cache-vol
+            - mountPath: /log_pvc
+              name: log-vol
           command: ["/bin/sh","-c"]
           args:
           - python3 /S2-waterbodies/src/train.py --data-dir /cache/chips;
@@ -56,6 +58,9 @@ spec:
       - name: chips-vol
         persistentVolumeClaim:
           claimName: lake-chips-zipped
+      - name: log-vol
+        persistentVolumeClaim:
+          claimName: training-logs
 
       restartPolicy: Never
 

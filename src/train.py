@@ -16,15 +16,26 @@ import dload
 ####################################################################################################
 cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
 
-HP = {}
-
 __spec__ = None # DEBUG with tqdm -- temp.
 
-####################################################################################################
-# FILE PATHS
-####################################################################################################
-LOG_DIR = '../log'
-MDL_DIR = '../mod'
+parser = argparse.ArgumentParser()
+parser.add_argument('--data-dir',default='../dat',
+	help='Dataset directory.')
+# parser.add_argument('--model-dir',default='../mdl',
+	# help='Directory storing the trained models/weights.')
+# parser.add('--log-dir',default='../log',
+	# help="Training log directory.")
+parser.add_argument('--params',default='../exp/parameters.json',
+	help='Path to file listing the hyperparameters to run.')
+parser.add_argument('--id',default=0,
+	help='A unique number identifying each model.')
+
+
+args = parser.parse_args()
+
+DATA_DIR = args.data_dir
+LOG_DIR  = f'{DATA_DIR}/log'
+MDL_DIR  = f'{DATA_DIR}/mdl'
 
 ####################################################################################################
 # FUNCTIONS
@@ -35,8 +46,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	N_va = len(dataloaders['validation'].dataset)
 	best_acc   = 0.0
 	best_epoch = 0
-	logger_tr = utils.Logger(f'{ROOT_DIR}/log/train_{model.model_id}_',)
-	logger_va = 
+	epoch_logger = utils.Logger(f'{LOG_DIR}/train_{model.model_id}_',
+		["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"])
 
 	total_start_time = time.time()
 
@@ -145,7 +156,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 if __name__ == "__main__":
 
 
-
 	HP = {
 		'LEARNING_RATE': 0.01,
 		'BATCH': 16,
@@ -158,12 +168,30 @@ if __name__ == "__main__":
 		'LOSS': 'BASIC_CE'
 	}
 
+	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC.
+
+	#MODEL
 	net = model.BaseUNet()
+	net = net.to(cuda_device)
 
+	#LOSS+GRADIENT
+	loss_fn   = torch.nn.CrossEntropyLoss()
+	optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
+	scheduler = torch.optim.lr_scheuler.StepLR(optimizer,step_size=10,gamma=0.1)
 
-	pass
+	#DATALOADERS
+	training_transforms = None
 
+	validation_transforms = None
+	
+	dataloaders = {
+		'training': torch.utils.data.DataLoader(tr_dset,batch_size=HP['BATCH'],
+			drop_last=False,shuffle=True,num_workers=2),
+		'validation': torch.utils.data.DataLoader(va_dset,batch_size=HP['BATCH'],
+			drop_last=False,shuffle=True,num_workers=2)
+	}
 
+	train_and_validate(net,loss_fn,optimizer,dataloaders,scheduler,n_epochs=5)
 ################################################################################
 ################################################################################
 ################################################################################
