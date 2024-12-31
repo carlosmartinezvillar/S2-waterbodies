@@ -15,11 +15,10 @@ import glob
 ################################################################################
 class SentinelDataset(torch.utils.data.Dataset):
 	def __init__(self,chip_dir,n_bands=3):
-		self.dir = chip_dir
-		files   = sorted(glob.glob("*.tif",root_dir=self.dir))
-		chips   = [i[0:-8] for i in files]		
-		self.unique_chips = np.unique(chips)
-		self.n_bands = n_bands
+		self.dir        = chip_dir
+		self.rgbn_files = sorted(glob.glob("*_B0X.tif",root_dir=self.dir))
+		self.ids        = [i[0:-8] for i in files]
+		self.n_bands    = n_bands
 		if self.n_bands!=3 and self.n_bands!=4:
 			raise ValueError("Incorrect number of bands in dataloader.")
 
@@ -27,24 +26,19 @@ class SentinelDataset(torch.utils.data.Dataset):
 			v2.ToImage(),
 			v2.ToDtype(torch.float32, scale=True)])
 
-		self.unique_tiles = None
-		self.unique_zones = None
-
 	def __len__(self):
-		return len(self.unique_chips)
+		return len(self.ids)
 
 	def __getitem__(self,idx):
-		# one way
-		b = self.transform(Image.open(f'{self.dir}/{self.unique_chips[idx]}_B02.tif'))
-		g = self.transform(Image.open(f'{self.dir}/{self.unique_chips[idx]}_B03.tif'))
-		r = self.transform(Image.open(f'{self.dir}/{self.unique_chips[idx]}_B04.tif'))
-		if self.n_bands == 4:
-			n = self.transform(Image.open(f'{self.dir}/{self.unique_chips[idx]}_B08.tif'))
-			arr = torch.cat([b,g,r,n],axis=0)
 
-		arr = torch.cat([b,g,r],axis=0)
-		t = self.transform(Image.open(f'{self.dir}/{self.unique_chips[idx]}_LBL.tif'))
-		return arr,t
+		if self.n_bands == 4:
+			img = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif'))
+		else:
+			r,g,b,_ = Image(open(f'{self.dir}/{self.ids[idx]}_B0X.tif')).split()
+			img = torch.cat(self.transform([r,g,b]),axis=0)
+			
+		lbl = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_LBL.tif'))
+		return img,lbl
 '''
 testing, validation split:
 Test dataset.
@@ -55,11 +49,16 @@ Validation dataset
 4. Choose a tile at random for each of the two UTM zones. 
 '''
 
-if __name__ == '__main__':
-	# CHECK LABELS AND STATS.TXT MAKE SOME SENSE...
-	files   = sorted(glob.glob("*.tif",root_dir='../lake_chips/chips'))
+def test_validation_split():
+	pass
 
-	chips   = [i[0:-8] for i in files] #119660 -- don't need this
+
+if __name__ == '__main__':
+
+	# CHECK LABELS AND STATS.TXT MAKE SOME SENSE...
+	band_files   = sorted(glob.glob("*_B0X.tif",root_dir='../lake_chips/chips')) 
+	unique_
+
 	chips   = np.unique(chips).sort() #23932
 	rasters = [i[0:-19] for i in files] #23932
 	tiles   = [i[-25:-19] for i in files] #23932
