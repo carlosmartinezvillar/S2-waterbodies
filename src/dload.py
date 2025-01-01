@@ -19,7 +19,7 @@ class SentinelDataset(torch.utils.data.Dataset):
 		self.rgbn_files = sorted(glob.glob("*_B0X.tif",root_dir=self.dir))
 		self.ids        = [i[0:-8] for i in files]
 		self.n_bands    = n_bands
-		if self.n_bands!=3 and self.n_bands!=4:
+		if (self.n_bands!=3) and (self.n_bands!=4):
 			raise ValueError("Incorrect number of bands in dataloader.")
 
 		self.transform = v2.Compose([
@@ -30,7 +30,6 @@ class SentinelDataset(torch.utils.data.Dataset):
 		return len(self.ids)
 
 	def __getitem__(self,idx):
-
 		if self.n_bands == 4:
 			img = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif'))
 		else:
@@ -56,8 +55,8 @@ def test_validation_split():
 if __name__ == '__main__':
 
 	# CHECK LABELS AND STATS.TXT MAKE SOME SENSE...
-	band_files   = sorted(glob.glob("*_B0X.tif",root_dir='../lake_chips/chips')) 
-	unique_
+	band_files  = sorted(glob.glob("*_B0X.tif",root_dir='../chips'))
+	label_files = sorted(glob.glob("*_LBL.tif",root_dir='../chips'))
 
 	chips   = np.unique(chips).sort() #23932
 	rasters = [i[0:-19] for i in files] #23932
