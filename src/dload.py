@@ -78,3 +78,4 @@ if __name__ == '__main__':
 	stat_tiles   = [i[-25:-19] for i in stat_files]
 	stat_zones   = [i[-24:-21] for i in stat_files]
 	pass
+ 
