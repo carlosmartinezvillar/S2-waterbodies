@@ -164,11 +164,11 @@ if __name__ == "__main__":
 		'WEIGHTS': 'random',
 		'RESCONNECTIONS': 0,
 		'LAYERSPERBLOCK': 2,
-		'DEPTH': 0,
-		'LOSS': 'BASIC_CE'
+		'LOSS': 'CE'
 	}
 
-	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC.
+	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC. --------->TODO
+
 
 	#MODEL
 	net = model.BaseUNet()
@@ -180,10 +180,9 @@ if __name__ == "__main__":
 	scheduler = torch.optim.lr_scheuler.StepLR(optimizer,step_size=10,gamma=0.1)
 
 	#DATALOADERS
-	training_transforms = None
+	#SPLIT DATASET INTO TRAININIG VALIDATION
+	# ------------------------------------------------------------------------------->TODO
 
-	validation_transforms = None
-	
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_dset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2),

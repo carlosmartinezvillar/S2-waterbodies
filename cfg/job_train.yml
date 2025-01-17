@@ -3,69 +3,64 @@ kind: Job
 metadata:
   name: train-job
 spec:
-  backoffLimit: 0
+
   template:
     spec:
 
       containers:
-        - name: trainbox
+        - name: train-box
           image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
           imagePullPolicy: IfNotPresent
+
           resources:
             limits:
               memory: 48Gi
               cpu: 8
               nvidia.com/gpu: 1
+              ephemeral-storage: 50Gi 
             requests:
               memory: 48Gi
               cpu: 8
               nvidia.com/gpu: 1
+              ephemeral-storage: 50Gi
 
           volumeMounts:
             - mountPath: /cache
               name: cache-vol
+
+            - mountPath: /chips_zipped_pvc
+              name: zipped-vol
+
             - mountPath: /log_pvc
               name: log-vol
+
+            - mountPath: /model_pvc
+              name: model-vol
 
           command: ["/bin/sh","-c"]
           args:
           - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
-            cp lake-chips-zipped/chips.zip -d cache/;
-            unzip cache/chips.zip -d cache/;
-            python3 /S2-waterbodies/src/train.py --data-dir /cache/chips ;
-
-      initContainers:
-        - name: copybox
-          image: docker.io/cimartinezvillar/geo:latest
-          imagePullPolicy: IfNotPresent
-          resources:
-            limits:
-              memory: 16Gi
-              cpu: 2
-            requests:
-              memory: 16Gi
-              cpu: 2
-          volumeMounts:
-            - mountPath: /cache
-              name: cache-vol
-            - mountPath: /zipped_chips
-              name: chips-vol
-          command: ["/bin/sh","-c"]
-          args:
-          - cp zipped_chips/chips.zip /cache;
-            unzip /cache/chips.zip -d /cache/chips;
-            git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
+            cp chips_zipped_pvc/chips.zip -d cache/;
+            unzip -q cache/chips.zip -d cache/;
+            python3 S2-waterbodies/src/train.py --data-dir /cache/chips --params S2-waterbodies/hpo/params.json --row 0;
 
       volumes:
       - name: cache-vol
         emptyDir: {}
           sizeLimit: 50G
-      - name: chips-vol
+          medium: Memory
+
+      - name: zipped-vol
         persistentVolumeClaim:
           claimName: lake-chips-zipped
+
       - name: log-vol
         persistentVolumeClaim:
-          claimName: training-logs
+          claimName: lake-training-logs
+
+      - name: model-vol
+        persistentVolumeClaim:
+          claimName: lake-weights
 
       restartPolicy: Never
 
@@ -82,3 +77,5 @@ spec:
                   operator: In
                   values:
                   - NVIDIA-GeForce-RTX-3090
+
+  backoffLimit: 1

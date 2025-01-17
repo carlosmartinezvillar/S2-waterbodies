@@ -58,8 +58,8 @@ if __name__ == '__main__':
 	band_files  = sorted(glob.glob("*_B0X.tif",root_dir='../chips'))
 	label_files = sorted(glob.glob("*_LBL.tif",root_dir='../chips'))
 
-	chips   = np.unique(chips).sort() #23932
-	rasters = [i[0:-19] for i in files] #23932
+	chips   = np.unique(chips).sort() #19456
+	rasters = [i[0:-19] for i in files] #19456
 	tiles   = [i[-25:-19] for i in files] #23932
 	zones   = [i[-24:-21] for i in files] #23932
  
@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
 	with open('../lake_chips/chips/stats.txt','r') as fp:
 		lines = fp.readlines()
-	stat_files = [i.rstrip().split('\t')[0] for i in lines]
+	stat_files  = [i.rstrip().split('\t')[0] for i in lines]
 	stat_pixels = [int(i.rstrip().split('\t')[1]) for i in lines]
 
 	stat_chips   = [i[0:-8] for i in stat_files]

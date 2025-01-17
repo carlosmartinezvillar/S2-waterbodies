@@ -7,6 +7,7 @@ import os
 import json
 import numpy as np
 import torch
+import itertools
 
 ####################################################################################################
 MOD_DIR = "../mod/"
@@ -197,10 +198,37 @@ def randomize_hyperparameters(n=1):
 	return HP
 
 
-def sequence_hyperparameters():
-	HP = {}
+def sequence_hyperparameters(id_start):
+	HP = []
 
 	#write a sequential list that can be used for grid search
+
+	#starting
+	optim     = ["adam","lamb"]
+	layers    = [2,3]
+	downstep  = ["conv","maxp"] #strided-convolution, max-pooling
+	lrate     = [0.1,0.01,0.001,0.0001]
+	# residuals = [0,1,2,3]
+	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)	
+	# loss      = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
+	# model     = ["unet","attn"]
+	# batch     = [8,16,32]
+
+	hp0 = list(itertools.product(lrate,optim,["ce"],[32],layers,downstep,["random"],["unet"]))
+
+	for i in range(len(hp0)):
+		row_dict = {}
+		row_dict['ID']     = f'{i+id_start:03}'
+		row_dict['LRATE']  = hp0[i][0]
+		row_dict['OPTIM']  = hp0[i][1]
+		row_dict['LOSS']   = hp0[i][2]
+		row_dict['BATCH']  = hp0[i][3]
+		row_dict['LAYERS'] = hp0[i][4]
+		row_dict['DOWN']   = hp0[i][5]
+		row_dict['INIT']   = hp0[i][6]
+		row_dict['MODEL']  = hp0[i][7]
+		
+		HP.append(d)
 
 	return HP
 
@@ -219,7 +247,8 @@ def set_seed(seed):
 ####################################################################################################
 if __name__ == "__main__":
 
-	#a small function check
+	#CHECK CONFUSION MATRIX
+	#check 2-way classification
 	y0 = np.array([
 		[0,0,0,0,0],
 		[0,0,1,1,1],
