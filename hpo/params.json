@@ -1,4 +1,4 @@
 [
-{"ID":000,"LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":16,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"},
-{"ID":001,"LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":8,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"}
+{"ID":"000", "LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":16,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"},
+{"ID":"001", "LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":8,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"}
 ]
