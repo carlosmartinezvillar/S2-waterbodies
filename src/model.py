@@ -52,6 +52,16 @@ class ConvBlock(torch.nn.Module):
 	def forward(self,x):
 		return self.layers(x)
 
+class BottleNeck(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(BottleNeck,self).__init__()
+		self.layers = torch.nn.Sequential(
+			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
+			#tbcontinued...
+		)
+
+	def forward(self,x):
+		return self.layers(x)
 
 class BaseUNet(torch.nn.Module):
     def __init__(self, in_channels=3, out_channels=1):
@@ -59,31 +69,31 @@ class BaseUNet(torch.nn.Module):
         
         # ENCODER
         self.encoder1 = ConvBlock(in_channels, 64)
-        self.encoder2 = ConvBlock(64, 128)
-        self.encoder3 = ConvBlock(128, 256)
-        self.encoder4 = ConvBlock(256, 512)
+        self.encoder2 = ConvBlock(64,128)
+        self.encoder3 = ConvBlock(128,256)
+        self.encoder4 = ConvBlock(256,512)
         
         # BOTTLENECK
-        self.bottleneck = ConvBlock(512, 1024)
+        self.bottleneck = ConvBlock(512,1024)
         
         # DECODER
-        self.decoder4 = UpBlock(1024, 512)
-        self.decoder3 = UpBlock(512, 256)
-        self.decoder2 = UpBlock(256, 128)
-        self.decoder1 = UpBlock(128, 64)
+        self.decoder4 = UpBlock(1024,512)
+        self.decoder3 = UpBlock(512,256)
+        self.decoder2 = UpBlock(256,128)
+        self.decoder1 = UpBlock(128,64)
         
         # LAST LAYER
-        self.final_conv = torch.nn.Conv2d(64, out_channels, kernel_size=1)
+        self.final_conv = torch.nn.Conv2d(64,out_channels,kernel_size=1)
 
     def forward(self, x):
         # ENCODER
         enc1 = self.encoder1(x)
-        enc2 = self.encoder2(F.max_pool2d(enc1, 2))
-        enc3 = self.encoder3(F.max_pool2d(enc2, 2))
-        enc4 = self.encoder4(F.max_pool2d(enc3, 2))
+        enc2 = self.encoder2(F.max_pool2d(enc1,kernel_size=2,stride=2))
+        enc3 = self.encoder3(F.max_pool2d(enc2,kernel_size=2,stride=2))
+        enc4 = self.encoder4(F.max_pool2d(enc3,kernel_size=2,stride=2))
         
         # BOTTLENECK
-        bottleneck = self.bottleneck(F.max_pool2d(enc4, 2))
+        bottleneck = self.bottleneck(F.max_pool2d(enc4,kernel_size=2,stride=2))
         
         # DECODER
         dec4 = self.decoder4(bottleneck)

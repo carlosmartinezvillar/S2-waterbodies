@@ -120,7 +120,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 				loss   = loss_fn(output,T)
 				_,Y    = torch.max(output,1)
 
-			#metrics
+			#metrics 
 			loss_sum = loss.item() * X.size(0)
 			samples_ran += X.size(0)
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())

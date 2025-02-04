@@ -1,4 +1,4 @@
 [
-{"ID":"000", "LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":16,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"},
-{"ID":"001", "LRATE":0.001,"OPTIM":"adam","LOSS":"ce","BATCH":8,"LAYERS":2,"DOWN":"maxp","INIT":"random","MODEL":"unet"}
+{"ID":"000", "LRATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"BLOCK_LAYERS":2,"DOWNSAMPLING":"maxp","WEIGHTS":"random","MODEL":"unet"},
+{"ID":"001", "LRATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"BLOCK_LAYERS":2,"DOWNSAMPLING":"maxp","WEIGHTS":"random","MODEL":"unet"}
 ]
