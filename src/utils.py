@@ -26,7 +26,7 @@ class Logger():
 		# self.head = '\t'.join([_ for _ in head])
 		self.arr  = None
 
-		with open(self.path,'w') as fp:
+		with open(self.path,'w+') as fp:
 			fp.write('\t'.join([_ for _ in head])+'\n')
 
 	def log(self,stats):
@@ -85,10 +85,10 @@ class ConfusionMatrix():
 			self.M[0,1] += ((T==1) & (Y==0)).sum() #FN
 			self.M[1,0] += ((T==0) & (Y==1)).sum() #FP		
 			self.M[1,1] += ((T==0) & (Y==0)).sum() #TN
-			self.TP = M[0,0]
-			self.FN = M[0,1] 
-			self.FP = M[1,0] 
-			self.TN = M[1,1] 
+			self.TP = self.M[0,0]
+			self.FN = self.M[0,1] 
+			self.FP = self.M[1,0] 
+			self.TN = self.M[1,1] 
 			#another way
 			# tp_mask = (Y==1) & (T==1)
 			# fp_mask = tp_mask ^ (Y==1)

@@ -34,7 +34,7 @@ parser.add_argument('--id',default=0,
 args = parser.parse_args()
 
 DATA_DIR = args.data_dir
-LOG_DIR  = f'{DATA_DIR}/log'
+LOG_DIR  = f'../log'
 MDL_DIR  = f'{DATA_DIR}/mdl'
 
 ####################################################################################################
@@ -46,7 +46,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	N_va = len(dataloaders['validation'].dataset)
 	best_acc   = 0.0
 	best_epoch = 0
-	epoch_logger = utils.Logger(f'{LOG_DIR}/train_{model.model_id}_',
+	epoch_logger = utils.Logger(f'{LOG_DIR}/train_log_{model.model_id:03}.tsv',
 		["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"])
 
 	total_start_time = time.time()
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC. --------->TODO
 	model_str = HP['MODEL'][0:4]
 	if model_str == 'unet':
-		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}()")
+		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
 	elif model_str == 'attn':
 		pass
 	else:
@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
 	#LEARNING RATE SCHEDULER
 	if HP['SCHEDULER'] == "step":
-		scheduler = torch.optim.lr_scheuler.StepLR(optimizer,step_size=10,gamma=0.1)
+		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.1)
 	elif HP['SCHEDULER'] == "linear":
 		scheduler = None
 	elif HP['SCHEDULER'] == "exp":
@@ -208,14 +208,20 @@ if __name__ == "__main__":
 	#DATALOADERS
 	#SPLIT DATASET INTO TRAININIG VALIDATION
 	# ------------------------------------------------------------------------------->TODO
+	tr_idx,va_idx,te_idx = dload.test_validation_split(DATA_DIR)
+	dataset              = dload.SentinelDataset(DATA_DIR)
+	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
+	va_dataset = torch.utils.data.Subset(dataset,va_idx)
+	# te_dataset = torch.utils.data.Subset(dataset,te_idx)
+
 	dataloaders = {
-		'training': torch.utils.data.DataLoader(tr_dset,batch_size=HP['BATCH'],
+		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2),
-		'validation': torch.utils.data.DataLoader(va_dset,batch_size=HP['BATCH'],
+		'validation': torch.utils.data.DataLoader(va_dataset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2)
 	}
 
-	train_and_validate(net,loss_fn,optimizer,dataloaders,scheduler,n_epochs=5)
+	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=5)
 
 
 

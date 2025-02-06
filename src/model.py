@@ -22,20 +22,6 @@ class ResBlock(torch.nn.Module):
 		out = out + x 
 		return out
 
-
-class DecBlock1(torch.nn.Module):
-	def __init__(self,i_ch,o_ch):
-		super(DecBlock1,self).__init__()
-		self.layers = torch.nn.Sequential(
-			torch.nn.ConvTranspose2d(i_ch,o_ch,kernel_size=2,stride=2),
-			torch.nn.ReLU(inplace=True),
-			ConvBlock(o_ch,o_ch)
-		)
-
-	def forward(self,x):
-		x = self.layers(x)
-		return x
-
 ################################################################################
 
 class EmbeddingLayer(torch.nn.Module):
@@ -54,40 +40,40 @@ class LastLayer(torch.nn.Module):
 	def forward(self,x):
 		return self.conv(x)
 
-class EncBlock1(torch.nn.Module):
+class ConvBlock1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch,block_type):
-		super(EncBlock,self).__init__()
-		if block_type == 'A'
-			C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
-		elif block_type == 'B'
-			C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
+		super(ConvBlock1,self).__init__()
+		if block_type == 'A':
+			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		elif block_type == 'B':
+			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
 		else:
 			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
-		B1 = torch.nn.BatchNorm2d(o_ch)
-		R1 = torch.nn.ReLU(inplace=True)
-		C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
-		B2 = torch.nn.BatchNorm2d(o_ch)
-		R2 = torch.nn.ReLU(inplace=True)
+		self.B1 = torch.nn.BatchNorm2d(o_ch)
+		self.R1 = torch.nn.ReLU(inplace=True)
+		self.C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B2 = torch.nn.BatchNorm2d(o_ch)
+		self.R2 = torch.nn.ReLU(inplace=True)
 
 	def forward(self,x):
-		x = C1(x)
-		x = B1(x)
-		x = R1(x)
-		x = C2(x)
-		x = B2(x)
-		x = R2(x)
+		x = self.C1(x)
+		x = self.B1(x)
+		x = self.R1(x)
+		x = self.C2(x)
+		x = self.B2(x)
+		x = self.R2(x)
 		return x
 
 class Bottleneck1(torch.nn.Module): # --------> SAME AS ConvBlock1 ABOVE, LEAVE 1 ONLY:TODO
-	def __init__(self,i_ch):
+	def __init__(self,i_ch,o_ch):
 		super(Bottleneck1,self).__init__()
 		self.layers = torch.nn.Sequential(
-			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False),
-			torch.nn.BatchNorm2d(i_ch),
-			torch.nn.ReLU(i_ch),
-			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False),
-			torch.nn.BatchNorm2d(i_ch),
-			torch.nn.ReLU(i_ch)		
+			torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False),
+			torch.nn.BatchNorm2d(o_ch),
+			torch.nn.ReLU(o_ch),
+			torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False),
+			torch.nn.BatchNorm2d(o_ch),
+			torch.nn.ReLU(o_ch)		
 		)
 
 	def forward(self,x):
@@ -141,29 +127,39 @@ class Bottleneck6(torch.nn.Module):
 ################################################################################
 #--- 2 LAYERS ---
 class UNet1_1(torch.nn.Module):
-    def __init__(self, in_channels=3, out_channels=1):
+    def __init__(self, model_id, in_channels=3, out_channels=1):
         super(UNet1_1, self).__init__()
-        
-        # ENCODER
+
+        self.model_name = 'unet1_1'
+       	self.model_id   = model_id
+
+        # FIRST LAYER
         self.embedding = EmbeddingLayer(in_channels,16)
-        self.encoder_1 = EncBlock1(16,32,'A')
+
+        # ENCODER
+        self.encoder_1 = ConvBlock1(16,32,'A')
         self.down_op_1 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
-        self.encoder_2 = EncBlock1(32,64,'A')
+        self.encoder_2 = ConvBlock1(32,64,'A')
         self.down_op_2 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
-        self.encoder_3 = EncBlock1(64,128,'A')
+        self.encoder_3 = ConvBlock1(64,128,'A')
         self.down_op_3 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
-        self.encoder_4 = EncBlock1(128,256,'A')
+        self.encoder_4 = ConvBlock1(128,256,'A')
         self.down_op_4 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         
         # BOTTLENECK
-        self.bottleneck = EncBlock1(256,512,'A')
+        self.bottleneck = ConvBlock1(256,512,'A')
         
         # DECODER
-        self.up_op_1   = torch.nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
-        self.decoder_4 = DecBlock1(512,256)
-        self.decoder_3 = DecBlock1(256,128)
-        self.decoder_2 = DecBlock1(128,64)
-        self.decoder_1 = DecBlock1(64,32)
+        self.up_op_4   = torch.nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
+        self.decoder_4 = ConvBlock1(512,256,'A')
+        self.up_op_3   = torch.nn.ConvTranspose2d(256,128,kernel_size=2,stride=2,bias=False)
+        self.decoder_3 = ConvBlock1(256,128,'A')
+        self.up_op_2   = torch.nn.ConvTranspose2d(128,64,kernel_size=2,stride=2,bias=False)        
+        self.decoder_2 = ConvBlock1(128,64,'A')
+        self.up_op_1   = torch.nn.ConvTranspose2d(64,32,kernel_size=2,stride=2,bias=False)        
+        self.decoder_1 = ConvBlock1(64,32,'A')
+
+        # LAST LAYER
         self.out_layer = LastLayer(32,2)
 
     def forward(self, x):
@@ -178,18 +174,17 @@ class UNet1_1(torch.nn.Module):
         o5 = self.bottleneck(self.down_op_4(o4))
         
         # DECODER
-        i4 = F.conv_transpose2d(o5,(512,256,2,2),stride=2)
-        dec4 = self.decoder_4(torch.cat([o4,i4], dim=1))
-        dec4 = 
-        dec3 = self.decoder3(dec4)
-        dec3 = torch.cat([dec3, enc3], dim=1)
-        dec2 = self.decoder2(dec3)
-        dec2 = torch.cat([dec2, enc2], dim=1)
-        dec1 = self.decoder1(dec2)
-        dec1 = torch.cat([dec1, enc1], dim=1)
-        
+        i4 = self.up_op_4(o5)
+        o6 = self.decoder_4(torch.cat([o4,i4],dim=1))
+        i3 = self.up_op_3(o6)
+        o7 = self.decoder_3(torch.cat([o3,i3],dim=1))
+        i2 = self.up_op_2(o7)
+        o8 = self.decoder_2(torch.cat([o2,i2],dim=1))
+        i1 = self.up_op_1(o8)
+       	o9 = self.decoder_1(torch.cat([o1,i1],dim=1)) 
+
         # FINAL LAYER
-        output = self.last_layer(dec1)
+        output = self.out_layer(o9)
         
         return output
 
