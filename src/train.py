@@ -67,7 +67,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		samples_ran = 0
 		model.train()
 
-		for X,T in dataloaders['training']
+		for X,T in dataloaders['training']:
 
 			X = X.to(cuda_device,non_blocking=True)
 			T = T.to(cuda_device,non_blocking=True)
@@ -155,24 +155,24 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
-
 	HP = {
-		'LEARNING_RATE': 0.01,
-		'BATCH': 16,
+		'ID':"000",
+		'LEARNING_RATE': 0.001,
+		'SCHEDULER':"step",
 		'OPTIM': 'adam',
-		'DOWNSAMPLING': 'maxpool',
-		'WEIGHTS': 'random',
-		'RESCONNECTIONS': 0,
-		'LAYERSPERBLOCK': 2,
-		'LOSS': 'CE'
+		'LOSS': 'CE',				
+		'BATCH': 16,
+		'INIT': 'random',
+		'MODEL': 'unet1_1'
 	}
 
 	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC. --------->TODO
+	if HP['MODEL'][0:4] == 'unet':
+		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}()")
+	else:
+		raise ValueError("INCORRECT MODEL NAME STRING.")
 
-
-	#MODEL
-	net = model.BaseUNet()
-	net = net.to(cuda_device)
+	net = net.to(cuda_device) #checked above
 
 	#LOSS+GRADIENT
 	loss_fn   = torch.nn.CrossEntropyLoss()
@@ -192,6 +192,9 @@ if __name__ == "__main__":
 
 	train_and_validate(net,loss_fn,optimizer,dataloaders,scheduler,n_epochs=5)
 
+
+
+### THE END...
 ################################################################################
 ################################################################################
 ################################################################################

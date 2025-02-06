@@ -147,7 +147,6 @@ class ConfusionMatrix():
 		print(self.table)
 		print(type(self.table))
 
-
 ####################################################################################################
 def IoU(Y,T,n_classes=2):
 	'''
@@ -190,7 +189,7 @@ def load_checkpoint(path,model,optim):
 	return epoch,t_loss, v_loss
 
 
-def randomize_hyperparameters(n=1):
+def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	HP = {}
 
 	#same as a grid search but randomize the choice of parameters
@@ -198,51 +197,50 @@ def randomize_hyperparameters(n=1):
 	return HP
 
 
-def sequence_hyperparameters(id_start):
+def sequence_hyperparameters(id_start): #-----------------------------------> TODO
 	HP = []
 
 	#write a sequential list that can be used for grid search
 
 	#starting
+	lrate     = [0.1,0.01,0.001,0.0001]	
+	sched     = ["step","linear","exp"]
 	optim     = ["adam","lamb"]
-	layers    = [2,3]
-	downstep  = ["conv","maxp"] #strided-convolution, max-pooling
-	lrate     = [0.1,0.01,0.001,0.0001]
-	# residuals = [0,1,2,3]
-	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)	
+	loss      = ["ce"]
 	# loss      = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
-	# model     = ["unet","attn"]
-	# batch     = [8,16,32]
+	batch     = [8,16,32]
+	init      = ["random"]	
+	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
+	model     = ["unet","attn"]
 
-	hp0 = list(itertools.product(lrate,optim,["ce"],[32],layers,downstep,["random"],["unet"]))
+	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,["random"],["unet1_1"]))
 
 	for i in range(len(hp0)):
 		row_dict = {}
-		row_dict['ID']     = f'{i+id_start:03}'
-		row_dict['LRATE']  = hp0[i][0]
-		row_dict['OPTIM']  = hp0[i][1]
-		row_dict['LOSS']   = hp0[i][2]
-		row_dict['BATCH']  = hp0[i][3]
-		row_dict['LAYERS'] = hp0[i][4]
-		row_dict['DOWN']   = hp0[i][5]
-		row_dict['INIT']   = hp0[i][6]
-		row_dict['MODEL']  = hp0[i][7]
+		row_dict['ID'] = f'{i+id_start:03}'
+		row_dict['LEARNING_RATE'] = hp0[i][0]
+		row_dict['SCHEDULER'] = hp0[i][1]
+		row_dict['OPTIM']  = hp0[i][2]
+		row_dict['LOSS']   = hp0[i][3]
+		row_dict['BATCH']  = hp0[i][4]
+		row_dict['INIT']   = hp0[i][5]
+		row_dict['MODEL']  = hp0[i][6]
 		
 		HP.append(d)
 
 	return HP
 
 
-def set_seed(seed):
+def set_seed(seed,cuda=True):
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)  # If using CUDA
+    if cuda is True:
+	    torch.cuda.manual_seed(seed)  # If using CUDA
     # torch.cuda.manual_seed_all(seed)  # If using multiple GPUs
     np.random.seed(seed)
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False #Am I losing speed here?
-
 
 ####################################################################################################
 if __name__ == "__main__":
