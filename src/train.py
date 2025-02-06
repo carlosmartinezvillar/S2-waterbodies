@@ -159,30 +159,55 @@ if __name__ == "__main__":
 		'ID':"000",
 		'LEARNING_RATE': 0.001,
 		'SCHEDULER':"step",
-		'OPTIM': 'adam',
-		'LOSS': 'CE',				
+		'OPTIM': "adam",
+		'LOSS': "ce",				
 		'BATCH': 16,
-		'INIT': 'random',
-		'MODEL': 'unet1_1'
+		'INIT': "random",
+		'MODEL': "unet1_1"
 	}
 
 	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC. --------->TODO
-	if HP['MODEL'][0:4] == 'unet':
+	model_str = HP['MODEL'][0:4]
+	if model_str == 'unet':
 		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}()")
+	elif model_str == 'attn':
+		pass
 	else:
 		raise ValueError("INCORRECT MODEL NAME STRING.")
 
 	net = net.to(cuda_device) #checked above
 
-	#LOSS+GRADIENT
-	loss_fn   = torch.nn.CrossEntropyLoss()
-	optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
-	scheduler = torch.optim.lr_scheuler.StepLR(optimizer,step_size=10,gamma=0.1)
+	#LOSS
+	if HP['LOSS'] == "ce":
+		loss_fn = torch.nn.CrossEntropyLoss()
+	elif HP['LOSS'] == "ew":
+		loss_fn = None
+	elif HP['LOSS'] == "cw":
+		loss_fn = None
+	else:
+		raise ValueError("INCORRECT STRING FOR LOSS HYPERPARAMETER.")
+
+	#OPTIMIZER
+	if HP['OPTIM'] == "adam":
+		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
+	elif HP['OPTIM'] == "lamb":
+		optimizer = None
+	else:
+		raise ValueError("INCORRECT STRING FOR OPTIMIZER HYPERPARAMETER.")
+
+	#LEARNING RATE SCHEDULER
+	if HP['SCHEDULER'] == "step":
+		scheduler = torch.optim.lr_scheuler.StepLR(optimizer,step_size=10,gamma=0.1)
+	elif HP['SCHEDULER'] == "linear":
+		scheduler = None
+	elif HP['SCHEDULER'] == "exp":
+		scheduler = None
+	else:
+		scheduler = None	
 
 	#DATALOADERS
 	#SPLIT DATASET INTO TRAININIG VALIDATION
 	# ------------------------------------------------------------------------------->TODO
-
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_dset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2),

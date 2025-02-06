@@ -1,13 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-class EmbeddingLayer(torch.nn.Module):
-	def __init__(self,i_ch,o_ch):
-		super(EmbeddingLayer,self).__init__()
-		self.conv = torch.nn.Conv2d(i_ch,o_ch,kernel_size=1)
-
-	def forward(self,x):
-		return self.conv(x)
 
 class ResBlock(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
@@ -30,9 +23,9 @@ class ResBlock(torch.nn.Module):
 		return out
 
 
-class UpBlock(torch.nn.Module):
+class DecBlock1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
-		super(UpBlock,self).__init__()
+		super(DecBlock1,self).__init__()
 		self.layers = torch.nn.Sequential(
 			torch.nn.ConvTranspose2d(i_ch,o_ch,kernel_size=2,stride=2),
 			torch.nn.ReLU(inplace=True),
@@ -43,39 +36,105 @@ class UpBlock(torch.nn.Module):
 		x = self.layers(x)
 		return x
 
+################################################################################
 
-class ConvBlock1_1(torch.nn.Module):
+class EmbeddingLayer(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
-		super(ConvBlock,self).__init__()
-		self.layers = torch.nn.Sequential(
-			torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False),
-			torch.nn.BatchNorm2d(o_ch),			
-			torch.nn.ReLU(inplace=True),
-			torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False),
-			torch.nn.BatchNorm2d(o_ch),			
-			torch.nn.ReLU(inplace=True)
-		)
+		super(EmbeddingLayer,self).__init__()
+		self.conv = torch.nn.Conv2d(i_ch,o_ch,kernel_size=1)
 
 	def forward(self,x):
-		return self.layers(x)
+		return self.conv(x)
 
-class ConvBlock1_2(torch.nn.Module):
+class LastLayer(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
-		super(ConvBlock,self).__init__()
+		super(LastLayer,self).__init__()
+		self.conv = torch.nn.Conv2d(i_ch,o_ch,kernel_size=1)
 
 	def forward(self,x):
-		return self.layers(x)
+		return self.conv(x)
 
-class BottleNeck(torch.nn.Module):
+class EncBlock1(torch.nn.Module):
+	def __init__(self,i_ch,o_ch,block_type):
+		super(EncBlock,self).__init__()
+		if block_type == 'A'
+			C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		elif block_type == 'B'
+			C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
+		else:
+			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
+		B1 = torch.nn.BatchNorm2d(o_ch)
+		R1 = torch.nn.ReLU(inplace=True)
+		C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		B2 = torch.nn.BatchNorm2d(o_ch)
+		R2 = torch.nn.ReLU(inplace=True)
+
+	def forward(self,x):
+		x = C1(x)
+		x = B1(x)
+		x = R1(x)
+		x = C2(x)
+		x = B2(x)
+		x = R2(x)
+		return x
+
+class Bottleneck1(torch.nn.Module): # --------> SAME AS ConvBlock1 ABOVE, LEAVE 1 ONLY:TODO
 	def __init__(self,i_ch):
-		super(BottleNeck,self).__init__()
+		super(Bottleneck1,self).__init__()
 		self.layers = torch.nn.Sequential(
 			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False),
-			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
+			torch.nn.BatchNorm2d(i_ch),
+			torch.nn.ReLU(i_ch),
+			torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False),
+			torch.nn.BatchNorm2d(i_ch),
+			torch.nn.ReLU(i_ch)		
 		)
 
 	def forward(self,x):
 		return self.layers(x)
+
+class Bottleneck2(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(Bottleneck2,self).__init__()
+		self.conv1 = torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.conv2 = torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
+
+	def forward(self,x):
+		o1 = self.conv1(x)
+		return self.conv2(o1) + o1
+
+class Bottleneck3(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(Bottleneck3,self).__init__()
+		pass
+
+	def forward(self,x):
+		return self.layers(x)
+
+class Bottleneck4(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(Bottleneck4,self).__init__()
+		pass
+
+	def forward(self,x):
+		return self.layers(x)
+
+class Bottleneck5(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(Bottleneck5,self).__init__()
+		pass
+
+	def forward(self,x):
+		return self.layers(x)
+
+class Bottleneck6(torch.nn.Module):
+	def __init__(self,i_ch):
+		super(Bottleneck6,self).__init__()
+		pass
+
+	def forward(self,x):
+		return self.layers(x)
+
 
 ################################################################################
 # NETWORKS
@@ -86,36 +145,42 @@ class UNet1_1(torch.nn.Module):
         super(UNet1_1, self).__init__()
         
         # ENCODER
-        self.encoder1 = ConvBlock(in_channels, 64)
-        self.encoder2 = ConvBlock(64,128)
-        self.encoder3 = ConvBlock(128,256)
-        self.encoder4 = ConvBlock(256,512)
+        self.embedding = EmbeddingLayer(in_channels,16)
+        self.encoder_1 = EncBlock1(16,32,'A')
+        self.down_op_1 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+        self.encoder_2 = EncBlock1(32,64,'A')
+        self.down_op_2 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+        self.encoder_3 = EncBlock1(64,128,'A')
+        self.down_op_3 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
+        self.encoder_4 = EncBlock1(128,256,'A')
+        self.down_op_4 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         
         # BOTTLENECK
-        self.bottleneck = ConvBlock(512,1024)
+        self.bottleneck = EncBlock1(256,512,'A')
         
         # DECODER
-        self.decoder4 = UpBlock(1024,512)
-        self.decoder3 = UpBlock(512,256)
-        self.decoder2 = UpBlock(256,128)
-        self.decoder1 = UpBlock(128,64)
-        
-        # LAST LAYER
-        self.final_conv = torch.nn.Conv2d(64,out_channels,kernel_size=1)
+        self.up_op_1   = torch.nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
+        self.decoder_4 = DecBlock1(512,256)
+        self.decoder_3 = DecBlock1(256,128)
+        self.decoder_2 = DecBlock1(128,64)
+        self.decoder_1 = DecBlock1(64,32)
+        self.out_layer = LastLayer(32,2)
 
     def forward(self, x):
         # ENCODER
-        enc1 = self.encoder1(x)
-        enc2 = self.encoder2(F.max_pool2d(enc1,kernel_size=2,stride=2))
-        enc3 = self.encoder3(F.max_pool2d(enc2,kernel_size=2,stride=2))
-        enc4 = self.encoder4(F.max_pool2d(enc3,kernel_size=2,stride=2))
+        x  = self.embedding(x)
+        o1 = self.encoder_1(x)
+        o2 = self.encoder_2(self.down_op_1(o1))
+        o3 = self.encoder_3(self.down_op_2(o2))
+        o4 = self.encoder_4(self.down_op_3(o3))
         
         # BOTTLENECK
-        bottleneck = self.bottleneck(F.max_pool2d(enc4,kernel_size=2,stride=2))
+        o5 = self.bottleneck(self.down_op_4(o4))
         
         # DECODER
-        dec4 = self.decoder4(bottleneck)
-        dec4 = torch.cat([dec4, enc4], dim=1)
+        i4 = F.conv_transpose2d(o5,(512,256,2,2),stride=2)
+        dec4 = self.decoder_4(torch.cat([o4,i4], dim=1))
+        dec4 = 
         dec3 = self.decoder3(dec4)
         dec3 = torch.cat([dec3, enc3], dim=1)
         dec2 = self.decoder2(dec3)
@@ -124,7 +189,7 @@ class UNet1_1(torch.nn.Module):
         dec1 = torch.cat([dec1, enc1], dim=1)
         
         # FINAL LAYER
-        output = self.final_conv(dec1)
+        output = self.last_layer(dec1)
         
         return output
 
