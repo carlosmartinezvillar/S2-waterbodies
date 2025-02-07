@@ -8,10 +8,8 @@ import json
 import numpy as np
 import torch
 import itertools
+import random
 
-####################################################################################################
-MOD_DIR = "../mod/"
-CFG_DIR = "../cfg/"
 ####################################################################################################
 class Logger():
 	def __init__(self,path,head):
@@ -160,15 +158,15 @@ def IoU(Y,T,n_classes=2):
 		pass
 
 
-def save_checkpoint(model,optim,epoch,t_loss,v_loss,best=False):
+def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 	'''
 	Saves model+optim as .pth.tar 
 	'''
 	# save_path = f'{MODEL_DIR}/state_{epoch:03d}.pt'
 	if best == True:
-		save_path = f'{MODEL_DIR}/best_{model.model_id:03}.pth.tar'
+		save_path = f'{path}/best_{model.model_id:03}.pth.tar'
 	else:
-		save_path = f'{MODEL_DIR}/model_{model.model_id:03}_e{epoch:02}.pth.tar'
+		save_path = f'{path}/model_{model.model_id:03}_e{epoch:02}.pth.tar'
 	checkpoint = {
 			'epoch': epoch,
 			't_loss': t_loss,
@@ -191,18 +189,14 @@ def load_checkpoint(path,model,optim):
 
 def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	HP = {}
-
 	#same as a grid search but randomize the choice of parameters
-
 	return HP
 
 
 def sequence_hyperparameters(id_start): #-----------------------------------> TODO
 	HP = []
 
-	#write a sequential list that can be used for grid search
-
-	#starting
+	# Each parameter
 	lrate     = [0.1,0.01,0.001,0.0001]	
 	sched     = ["step","linear","exp"]
 	optim     = ["adam","lamb"]
@@ -211,13 +205,14 @@ def sequence_hyperparameters(id_start): #-----------------------------------> TO
 	batch     = [8,16,32]
 	init      = ["random"]	
 	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
-	model     = ["unet","attn"]
+	model     = ["unet1_1","attn"]
 
+	# Cross-product
 	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,["random"],["unet1_1"]))
 
 	for i in range(len(hp0)):
 		row_dict = {}
-		row_dict['ID'] = f'{i+id_start:03}'
+		row_dict['ID'] = i+id_start
 		row_dict['LEARNING_RATE'] = hp0[i][0]
 		row_dict['SCHEDULER'] = hp0[i][1]
 		row_dict['OPTIM']  = hp0[i][2]

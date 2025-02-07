@@ -6,39 +6,43 @@ import random
 import time
 from tqdm import tqdm
 import argparse
+import json
 
 import utils
 import model
 import dload
 
 ####################################################################################################
-# SET GLOBAL VARS FROM ENV ET CETERA.
+# SET GLOBAL VARS FROM ENV ET CETERA ET CETERA
 ####################################################################################################
 cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
 
 __spec__ = None # DEBUG with tqdm -- temp.
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--data-dir',default='../dat',
+required = parser.add_argument_group('required arguments')
+optional = parser.add_argument_group('optional arguments')
+required.add_argument('--data-dir',required=True,
 	help='Dataset directory.')
-# parser.add_argument('--model-dir',default='../mdl',
-	# help='Directory storing the trained models/weights.')
-# parser.add('--log-dir',default='../log',
-	# help="Training log directory.")
-parser.add_argument('--params',default='../exp/parameters.json',
-	help='Path to file listing the hyperparameters to run.')
-parser.add_argument('--id',default=0,
-	help='A unique number identifying each model.')
-
+required.add_argument('--model-dir',required=True,
+	help='Directory to store the trained models/weights.')
+required.add_argument('--log-dir',required=True,default='../log',
+	help="Directory to store training logs.")
+required.add_argument('--params',required=True,default='../hpo/parameters.json',
+	help='Path to file listing hyperparameters.')
+required.add_argument('--row',required=True,type=int,default=0,
+	help='Row number in parameter file listed in --params')
+optional.add_argument('--seed',required=False,action='store_true',
+	help='Fix the random seed of imported modules for reproducibility.')
 
 args = parser.parse_args()
 
-DATA_DIR = args.data_dir
-LOG_DIR  = f'../log'
-MDL_DIR  = f'{DATA_DIR}/mdl'
+DATA_DIR  = args.data_dir
+LOG_DIR   = args.log_dir
+MODEL_DIR = args.model_dir
 
 ####################################################################################################
-# FUNCTIONS
+# TRAIN FUNCTION
 ####################################################################################################
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
@@ -94,12 +98,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			t.update(1)
 		
 		t.close()
+
+		if scheduler is not None:
+			scheduler.step()
+
 		# log training
 		loss_tr = loss_sum / N_tr
 		print(f'[T] loss: {loss_tr:.4f} | acc: {M_tr.acc():.4f}')
 
-		if scheduler is not None:
-			scheduler.step()
 		
 		############################################################
 		# VALIDATION
@@ -133,20 +139,20 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		loss_va = loss_sum / N_va
 		print(f'[V] loss: {loss_va:.4f} | acc: {M_va.acc():.4f}')
 
-
+		############################################################
 		# LOG EPOCH
-		###########
+		############################################################
 		epoch_time = time.time() - epoch_start_time
 		print(f'Epoch time: {epoch_time:.2f}')
 		epoch_log = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
 		epoch_logger.log(epoch_log)
 
 		# SAVE MODEL
-		epoch_metric = M_va.iou()
-		if best_acc < epoch_metric:
-			best_acc = epoch_metric
+		epoch_iou = M_va.iou()
+		if best_iou < epoch_iou:
+			best_iou = epoch_iou
 			best_epoch = epoch
-			utils.save_checkpoint(model,optimizer,epoch,loss_tr,loss_va,best=True)
+			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
 		print(f'\nBest validation IoU: {best_acc:.4f}')
 		total_time = time.time() - total_start_time
@@ -155,47 +161,55 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
-	HP = {
-		'ID':"000",
-		'LEARNING_RATE': 0.001,
-		'SCHEDULER':"step",
-		'OPTIM': "adam",
-		'LOSS': "ce",				
-		'BATCH': 16,
-		'INIT': "random",
-		'MODEL': "unet1_1"
-	}
+	# HP = {
+	# 	'ID':0,
+	# 	'LEARNING_RATE': 0.001,
+	# 	'SCHEDULER':"step",
+	# 	'OPTIM': "adam",
+	# 	'LOSS': "ce",				
+	# 	'BATCH': 16,
+	# 	'INIT': "random",
+	# 	'MODEL': "unet1_1"
+	# }
 
-	# PARSE HP DICT HERE TO SET OPTIMIZER, SCHEDULER, LOSS_FN, MODEL, ETC. --------->TODO
+	# LOAD AND PARSE HP DICT
+	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
+	with open(args.params,'r') as fp:
+		HP_LIST = json.load(fp)
+	assert len(HP_LIST) > 0, "train.py: EMPTY JSON FILE"
+	assert 0 <= args.row < len(HP_LIST), "train.py: ROW arg OUT OF RANGE"
+	HP = HP_LIST[args.row]
+
+	# MODEL
 	model_str = HP['MODEL'][0:4]
+	assert model_str in ["attn","unet"], "train.py: INCORRECT MODEL STRING."
 	if model_str == 'unet':
 		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
-	elif model_str == 'attn':
+	if model_str == 'attn':
 		pass
-	else:
-		raise ValueError("INCORRECT MODEL NAME STRING.")
 
+	# MODEL -- TO GPU
 	net = net.to(cuda_device) #checked above
 
-	#LOSS
+	# LOSS
+	assert HP['LOSS'] in ["ce","ew","cw"], "train.py: INCORRECT STRING FOR LOSS IN DICT."
 	if HP['LOSS'] == "ce":
 		loss_fn = torch.nn.CrossEntropyLoss()
-	elif HP['LOSS'] == "ew":
+	if HP['LOSS'] == "ew":
 		loss_fn = None
-	elif HP['LOSS'] == "cw":
+	if HP['LOSS'] == "cw":
 		loss_fn = None
-	else:
-		raise ValueError("INCORRECT STRING FOR LOSS HYPERPARAMETER.")
 
-	#OPTIMIZER
+
+	# OPTIMIZER
+	assert HP["OPTIM"] in ["adam","lamb"], "train.py: INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
-	elif HP['OPTIM'] == "lamb":
+	if HP['OPTIM'] == "lamb":
 		optimizer = None
-	else:
-		raise ValueError("INCORRECT STRING FOR OPTIMIZER HYPERPARAMETER.")
 
-	#LEARNING RATE SCHEDULER
+
+	# LEARNING RATE SCHEDULER
 	if HP['SCHEDULER'] == "step":
 		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.1)
 	elif HP['SCHEDULER'] == "linear":
@@ -205,9 +219,11 @@ if __name__ == "__main__":
 	else:
 		scheduler = None	
 
-	#DATALOADERS
-	#SPLIT DATASET INTO TRAININIG VALIDATION
-	# ------------------------------------------------------------------------------->TODO
+	# SET ALL SEEDS
+	if args.seed is True:
+		utils.set_seed(476)	
+
+	#DATALOADERS -- SPLIT DATASET INTO TRAINING VALIDATION --- GOTTA FIX THE SPLIT BEFORE-HAND:TODO
 	tr_idx,va_idx,te_idx = dload.test_validation_split(DATA_DIR)
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
@@ -218,9 +234,11 @@ if __name__ == "__main__":
 		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2),
 		'validation': torch.utils.data.DataLoader(va_dataset,batch_size=HP['BATCH'],
-			drop_last=False,shuffle=True,num_workers=2)
+			drop_last=False,shuffle=False,num_workers=2)
 	}
 
+
+	# RUN
 	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=5)
 
 

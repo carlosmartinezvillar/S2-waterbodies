@@ -1,4 +1,4 @@
 # Model Logs
 
-The model logs are stored as .txt files using the following convention:
+The model logs are stored as .tsv files using the following convention:
 

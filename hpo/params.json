@@ -1,4 +1,4 @@
 [
-{"ID":"000", "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_1"},
-{"ID":"001", "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_1"}
+{"ID":0, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_1"},
+{"ID":1, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_1"}
 ]
