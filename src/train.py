@@ -211,16 +211,15 @@ if __name__ == "__main__":
 	else:
 		scheduler = None	
 
-	# SET ALL SEEDS
-	if args.seed is True:
-		utils.set_seed(476)	
-
-	#DATALOADERS -- SPLIT DATASET INTO TRAINING VALIDATION --- GOTTA FIX THE SPLIT BEFORE-HAND:TODO
-	tr_idx,va_idx,te_idx = dload.test_validation_split(DATA_DIR)
+	#DATALOADERS 
+	tr_idx,va_idx,te_idx = dload.get_split_indices(DATA_DIR)
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
 	va_dataset = torch.utils.data.Subset(dataset,va_idx)
-	# te_dataset = torch.utils.data.Subset(dataset,te_idx)
+
+	# SET ALL SEEDS
+	if args.seed is True:
+		utils.set_seed(476)	
 
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
@@ -231,4 +230,5 @@ if __name__ == "__main__":
 
 
 	# RUN
-	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=5)
+	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=50)
+

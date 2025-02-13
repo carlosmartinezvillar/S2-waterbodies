@@ -44,8 +44,10 @@ class ConvBlock1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch,block_type):
 		super(ConvBlock1,self).__init__()
 		if block_type == 'A':
+			# HALF-PADDING/STRIDE 1 CONVOLUTION
 			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
 		elif block_type == 'B':
+			# STRIDE 2 CONVOLUTION
 			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
 		else:
 			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")

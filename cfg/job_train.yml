@@ -40,9 +40,12 @@ spec:
           command: ["/bin/sh","-c"]
           args:
           - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
-            cp chips_zipped_pvc/chips.zip -d cache/;
+            cp chips_zipped_pvc/chips.zip cache/;
             unzip -q cache/chips.zip -d cache/;
-            python3 S2-waterbodies/src/train.py --data-dir /cache/chips --params S2-waterbodies/hpo/params.json --row 0;
+            mkdir /cache/model;
+            cd S2-waterbodies/src;
+            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /log_pvc --params ../hpo/params.json --row 0;
+            cp /cache/model/*.pth.tar /model_pvc;
 
       volumes:
       - name: cache-vol

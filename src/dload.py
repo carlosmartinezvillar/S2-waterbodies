@@ -40,24 +40,23 @@ class SentinelDataset(torch.utils.data.Dataset):
 		return img,lbl
 
 
-'''
-testing, validation split:
-Test dataset.
-1. Choose 2/6 UTM zones at random, without replacement.
-2. Choose a tile with (a number of raster below the median) at random for each of the two UTM zones.
-Validation dataset
-3. Off remaining set, choose 2/6 UTM zones at random, without replacement.
-4. Choose a tile at random for each of the two UTM zones. 
-'''
-def test_validation_split(chip_dir):
+def get_split_indices(chip_dir):
 	if os.path.isfile('../cfg/training.txt') and os.path.isfile('../cfg/validation.txt'):
-		# ----- load indices from files
+		# ----- LOAD INDICES FROM PREVIOULY SAVED FILES
 		with open('../cfg/training.txt','r') as fp_tr:
 			lines = fp_tr.readlines()
-			training_idx = []
+			training_idxs = [int(_.rstrip('\n')) for _ in lines]
+
+		with open('../cfg/validation.txt','r') as fp_va:
+			lines = fp_va.readlines()
+			validation_idxs = [int(_.rstrip('\n')) for _ in lines]
+
+		with open('../cfg/testing.txt','r') as fp_te:
+			lines = fp_te.readlines()
+			test_idxs = [int(_.rstrip('\n')) for _ in lines]
 
 	else:
-		# ----- sample UTM zones
+		# ----- sample UTM zones ---- SAMPLING 4 TILES AT RANDOM --------- TODO:
 		band_files  = sorted(glob.glob("*_B0X.tif",root_dir=chip_dir))
 		label_files = sorted(glob.glob("*_LBL.tif",root_dir=chip_dir))
 
@@ -80,49 +79,11 @@ def test_validation_split(chip_dir):
 		training_mask    = ~(validation_mask+test_mask)
 		training_idx     = np.where(training_mask)[0]
 	
-	return training_idx,validation_idx,test_idx
+	return training_idxs,validation_idxs,test_idxs
 
 
 if __name__ == '__main__':
-
-	# CHECK LABELS AND STATS.TXT MAKE SOME SENSE...
-	band_files  = sorted(glob.glob("*_B0X.tif",root_dir='../../chips'))
-	label_files = sorted(glob.glob("*_LBL.tif",root_dir='../../chips'))
-
-	all_rasters = [i[0:-19] for i in band_files] #19456
-	unique_r,r_inv,r_cnt = np.unique(all_rasters,return_inverse=True,return_counts=True) #726
-
-	all_tiles = [i[-25:-19] for i in band_files] #19456
-	tiles   = [i[-6:] for i in unique_r] #726
-	unique_t,t_inv,t_cnt = np.unique(tiles,return_inverse=True,return_counts=True) #21
-
-	# CHOOSE 4 TILES AT RANDOM
-	# tile_choices     = np.random.choice(unique_t,4,replace=False)
-	# validation_tiles = tile_choices[0:2]
-	# validation_mask  = np.isin(all_tiles,validation_tiles)
-	# validation_idx   = np.where(validation_mask)[0]
-	# test_tiles       = tile_choices[2:]
-	# test_mask        = np.isin(all_tiles,test_tiles)
-	# test_idx         = np.where(test_mask)[0]
-	# training_mask    = ~(validation_mask+test_mask)
-	# training_idx     = np.where(training_mask)[0]
-	# pass
-
-	# tile_choices = []
-	# unique_z,z_inv,z_cnt = np.unique(zones,return_inverse=True,return_counts=True) #6
-	zone_choice = np.random.choice(unique_z,2,replace=False)
-	# for choice in zone_choice:
-	# 	idx = np.where(unique_z==choice)
-	# 	tiles_in_zone = unique_t[(z_inv==idx).flatten()]
-	# 	tile_choices.append(np.random.choice(tiles_in_zone,1))
-
-	# tile_0 = np.nonzero(tile_choice[0] == all_tiles)[0]
-	# tile_1 = np.nonzero(tile_choice[1] == all_tiles)[0]
-	# test_indices = np.concatenate(tile_0,tile_1)
-	# pass
-
-	# all_zones = [i[-24:-21] for i in band_files] #19456
-	# zones   = [i[1:4] for i in unique_t] #21
+	pass
 
 	#STATS.TXT
 	# with open('../lake_chips/chips/stats.txt','r') as fp:
