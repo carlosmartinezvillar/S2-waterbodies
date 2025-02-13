@@ -43,13 +43,15 @@ spec:
             cp chips_zipped_pvc/chips.zip cache/;
             unzip -q cache/chips.zip -d cache/;
             mkdir /cache/model;
+            mkdir /cache/logs;
             cd S2-waterbodies/src;
-            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /log_pvc --params ../hpo/params.json --row 0;
+            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
+            cp /cache/logs/*.tsv /log_pvc;
 
       volumes:
       - name: cache-vol
-        emptyDir: {}
+        emptyDir:
           sizeLimit: 50G
           medium: Memory
 

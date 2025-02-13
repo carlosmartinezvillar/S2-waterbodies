@@ -48,7 +48,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 	N_tr = len(dataloaders['training'].dataset)
 	N_va = len(dataloaders['validation'].dataset)
-	best_acc   = 0.0
+	best_iou   = 0.0
 	best_epoch = 0
 	epoch_logger = utils.Logger(f'{LOG_DIR}/train_log_{model.model_id:03}.tsv',
 		["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"])
@@ -143,7 +143,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		# LOG EPOCH
 		############################################################
 		epoch_time = time.time() - epoch_start_time
-		print(f'Epoch time: {epoch_time:.2f}')
+		print(f'Epoch time: {epoch_time:.2f}s')
 		epoch_log = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
 		epoch_logger.log(epoch_log)
 
@@ -154,7 +154,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			best_epoch = epoch
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
-		print(f'\nBest validation IoU: {best_acc:.4f}')
+		print(f'\nBest validation IoU: {best_iou:.4f}')
 		total_time = time.time() - total_start_time
 		print(f'\nTotal time: {total_time:.2f}')
 
