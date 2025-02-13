@@ -24,25 +24,25 @@ required = parser.add_argument_group('required arguments')
 optional = parser.add_argument_group('optional arguments')
 required.add_argument('--data-dir',required=True,
 	help='Dataset directory.')
-required.add_argument('--model-dir',required=True,
+required.add_argument('--net-dir',required=True,
 	help='Directory to store the trained models/weights.')
 required.add_argument('--log-dir',required=True,default='../log',
 	help="Directory to store training logs.")
 required.add_argument('--params',required=True,default='../hpo/parameters.json',
 	help='Path to file listing hyperparameters.')
 required.add_argument('--row',required=True,type=int,default=0,
-	help='Row number in parameter file listed in --params')
+	help='Row number in the given file for hyperparameters.')
 optional.add_argument('--seed',required=False,action='store_true',
 	help='Fix the random seed of imported modules for reproducibility.')
-
+optional.add_argument('--gpu',required=False,)
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
 LOG_DIR   = args.log_dir
-MODEL_DIR = args.model_dir
+MODEL_DIR = args.net_dir
 
 ####################################################################################################
-# TRAIN FUNCTION
+# TRAININING+VALIDATION
 ####################################################################################################
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
@@ -104,7 +104,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		# log training
 		loss_tr = loss_sum / N_tr
-		print(f'[T] loss: {loss_tr:.4f} | acc: {M_tr.acc():.4f}')
+		print(f'[T] loss: {loss_tr:.5f} | acc: {M_tr.acc():.5f} | iou: {M_tr.iou():.5f}')
 
 		
 		############################################################
@@ -137,7 +137,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		t.close()
 		# log validation
 		loss_va = loss_sum / N_va
-		print(f'[V] loss: {loss_va:.4f} | acc: {M_va.acc():.4f}')
+		print(f'[V] loss: {loss_va:.5f} | acc: {M_va.acc():.5f} | iou: {M_va.iou():.5f}')
 
 		############################################################
 		# LOG EPOCH
@@ -161,23 +161,15 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
-	# HP = {
-	# 	'ID':0,
-	# 	'LEARNING_RATE': 0.001,
-	# 	'SCHEDULER':"step",
-	# 	'OPTIM': "adam",
-	# 	'LOSS': "ce",				
-	# 	'BATCH': 16,
-	# 	'INIT': "random",
-	# 	'MODEL': "unet1_1"
-	# }
-
 	# LOAD AND PARSE HP DICT
 	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
+
 	with open(args.params,'r') as fp:
 		HP_LIST = json.load(fp)
+	
 	assert len(HP_LIST) > 0, "train.py: EMPTY JSON FILE"
-	assert 0 <= args.row < len(HP_LIST), "train.py: ROW arg OUT OF RANGE"
+	assert 0 <= args.row < len(HP_LIST), "train.py: ROW arg OUT OF RANGE" #0-indexed
+	
 	HP = HP_LIST[args.row]
 
 	# MODEL
@@ -240,25 +232,3 @@ if __name__ == "__main__":
 
 	# RUN
 	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=5)
-
-
-
-### THE END...
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-# def train_mixed_precision(model,loss_fn,optimizer,dataloader,device=0):
-# 	model.train()
-# 	sum_loss = 0
-# 	for batch_idx,(X,T) in enumerate(dataloader):
-# 		X,T = X.cuda(device,non_blocking=True), T.cuda(device,non_blocking=True)
-# 		optimizer.zero_grad()
-# 		with torch.cuda.amp.autocast(enabled=True,dtype=toch.float16):
-# 			Y = model(X)
-# 			loss = loss_fn(Y,T)
-# 		scaler.scale(loss).backward()
-# 		scaler.unscale_(optimizer) #unscale for loss calc at fp32
-# 		sum_loss += loss.item()
-# 		scaler.step(optimizer)
-# 		scaler.update()

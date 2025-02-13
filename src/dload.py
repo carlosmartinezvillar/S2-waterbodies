@@ -38,6 +38,8 @@ class SentinelDataset(torch.utils.data.Dataset):
 			
 		lbl = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_LBL.tif')).squeeze(0).to(torch.long)
 		return img,lbl
+
+
 '''
 testing, validation split:
 Test dataset.
@@ -47,30 +49,36 @@ Validation dataset
 3. Off remaining set, choose 2/6 UTM zones at random, without replacement.
 4. Choose a tile at random for each of the two UTM zones. 
 '''
-
 def test_validation_split(chip_dir):
-	# CHECK LABELS AND STATS.TXT MAKE SOME SENSE...
-	band_files  = sorted(glob.glob("*_B0X.tif",root_dir=chip_dir))
-	label_files = sorted(glob.glob("*_LBL.tif",root_dir=chip_dir))
+	if os.path.isfile('../cfg/training.txt') and os.path.isfile('../cfg/validation.txt'):
+		# ----- load indices from files
+		with open('../cfg/training.txt','r') as fp_tr:
+			lines = fp_tr.readlines()
+			training_idx = []
 
-	all_rasters = [i[0:-19] for i in band_files] #19456
-	all_tiles = [i[-25:-19] for i in band_files] #19456
-	
-	unique_r,r_inv,r_cnt = np.unique(all_rasters,return_inverse=True,return_counts=True) #726
-	tiles   = [i[-6:] for i in unique_r] #726
-	unique_t,t_inv,t_cnt = np.unique(tiles,return_inverse=True,return_counts=True) #21
+	else:
+		# ----- sample UTM zones
+		band_files  = sorted(glob.glob("*_B0X.tif",root_dir=chip_dir))
+		label_files = sorted(glob.glob("*_LBL.tif",root_dir=chip_dir))
 
-	# CHOOSE 4 TILES AT RANDOM
-	tile_choices     = np.random.choice(unique_t,4,replace=False)
-	validation_tiles = tile_choices[0:2]
-	test_tiles       = tile_choices[2:]
+		all_rasters = [i[0:-19] for i in band_files] #19456
+		all_tiles = [i[-25:-19] for i in band_files] #19456
+		
+		unique_r,r_inv,r_cnt = np.unique(all_rasters,return_inverse=True,return_counts=True) #726
+		tiles   = [i[-6:] for i in unique_r] #726
+		unique_t,t_inv,t_cnt = np.unique(tiles,return_inverse=True,return_counts=True) #21
 
-	validation_mask  = np.isin(all_tiles,validation_tiles)
-	validation_idx   = np.where(validation_mask)[0]
-	test_mask        = np.isin(all_tiles,test_tiles)
-	test_idx         = np.where(test_mask)[0]
-	training_mask    = ~(validation_mask+test_mask)
-	training_idx     = np.where(training_mask)[0]
+		# CHOOSE 4 TILES AT RANDOM
+		tile_choices     = np.random.choice(unique_t,4,replace=False)
+		validation_tiles = tile_choices[0:2]
+		test_tiles       = tile_choices[2:]
+
+		validation_mask  = np.isin(all_tiles,validation_tiles)
+		validation_idx   = np.where(validation_mask)[0]
+		test_mask        = np.isin(all_tiles,test_tiles)
+		test_idx         = np.where(test_mask)[0]
+		training_mask    = ~(validation_mask+test_mask)
+		training_idx     = np.where(training_mask)[0]
 	
 	return training_idx,validation_idx,test_idx
 

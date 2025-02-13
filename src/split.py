@@ -1,10 +1,17 @@
+'''
+split.py
+--------
+This script runs a training/validation/split
+'''
 import argparse
 import os
 import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data-dir',default=None,required=True,help='Dataset directory.')
-parser.add_argument('-z','--zones',help='Choose tiles by randomly drawing in UTM zones.')
+parser.add_argument('-z','--zones',action='store_true',help='Choose tiles by drawing from different UTM zones.')
+
+DEFAULT_SEED = 476
 
 if __name__ == '__main__':
 
@@ -14,8 +21,10 @@ if __name__ == '__main__':
 	band_files  = sorted(glob.glob("*_B0X.tif",root_dir=chip_dir))
 	label_files = sorted(glob.glob("*_LBL.tif",root_dir=chip_dir))	
 
-    np.random.seed(476)
-    random.seed(476)
+    np.random.seed(DEFAULT_SEED)
+    random.seed(DEFAULT_SEED)
+
+
 
 	all_rasters = [i[0:-19] for i in band_files] #19456
 	all_tiles = [i[-25:-19] for i in band_files] #19456
