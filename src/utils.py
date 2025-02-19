@@ -74,7 +74,7 @@ class ConfusionMatrix():
 		self.TN        = 0
 		self.y_batches = None
 		self.t_batches = None
-		self.epsilon   = 0.000001
+		self.epsilon   = 0.0000000001
 
 	def update(self,Y,T):
 		#for 2 classes, array of indices and mask are the same.
@@ -202,10 +202,14 @@ def sequence_hyperparameters(id_start): #-----------------------------------> TO
 	optim     = ["adam","lamb"]
 	loss      = ["ce"]
 	# loss      = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
-	batch     = [8,16,32]
-	init      = ["random"]	
+	batch     = [16,32,64]
+	init      = ["random"]
 	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
-	model     = ["unet1_1","attn"]
+	model     = ["unet1_1"]
+	# model     = ["unet1_1","unet1_2","unet1_3","unet1_4","unet2_1","unet2_2","unet2_3","unet2_4",
+	# 			"unet3_1","unet4_1","unet4_2","unet4_3","unet4_4","unet5_1","unet5_2","unet5_3",
+	# 			"unet5_4","unet6_1"]
+	# model     = ["unet1_1","attn"]
 
 	# Cross-product
 	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,["random"],["unet1_1"]))
@@ -240,6 +244,9 @@ def set_seed(seed,cuda=True):
 ####################################################################################################
 if __name__ == "__main__":
 
+	#TEST CONFUSION MATRIX
+	print("TESTING CONFUSION MATRIX")
+
 	#CHECK CONFUSION MATRIX
 	#check 2-way classification
 	y0 = np.array([
@@ -259,6 +266,7 @@ if __name__ == "__main__":
 
 	# for i in range(1000):
 	cm2.update(y0,t0)
+	cm2
 
 	#another check for 3-way classification
 	#from array [B,C,x,y] after argmax axis=1, [B,x,y]
@@ -278,4 +286,5 @@ if __name__ == "__main__":
 
 	cm3 = ConfusionMatrix(n_classes=3)
 	# for i in range(1000):
-		# cm3.update(y0,t0)
+	cm3.update(y0,t0)
+	cm3
