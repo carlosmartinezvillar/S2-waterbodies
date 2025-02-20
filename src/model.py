@@ -44,7 +44,7 @@ class LastLayer(torch.nn.Module):
 
 class ConvBlock1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch,block_type):
-		super(ConvBlock1,self).__init__()
+		super(ConvBlock1,self).__init__() #-----> switch params to dict and then iterate to set layers :TODO:
 		if block_type == 'A':
 			# HALF-PADDING/STRIDE 1 CONVOLUTION
 			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
@@ -53,6 +53,28 @@ class ConvBlock1(torch.nn.Module):
 			self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
 		else:
 			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
+		self.B1 = torch.nn.BatchNorm2d(o_ch)
+		self.R1 = torch.nn.ReLU(inplace=True)
+		self.C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B2 = torch.nn.BatchNorm2d(o_ch)
+		self.R2 = torch.nn.ReLU(inplace=True)
+
+	def forward(self,x):
+		x = self.C1(x)
+		x = self.B1(x)
+		x = self.R1(x)
+		x = self.C2(x)
+		x = self.B2(x)
+		x = self.R2(x)
+		return x
+
+
+class UpBlock1_4(torch.nn.Module):
+	def __init__(self,i_ch,o_ch):
+		super(UpBlock1_4,self).__init__()
+		# conv1_params = {'kernel_size':2,'stride':2,'padding':0,'output_padding':0,'bias':False}
+		conv1_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}		
+		self.C1 = torch.nn.ConvTranspose2d(i_ch,o_ch,**conv1_params)
 		self.B1 = torch.nn.BatchNorm2d(o_ch)
 		self.R1 = torch.nn.ReLU(inplace=True)
 		self.C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
@@ -313,12 +335,51 @@ class UNet1_3(torch.nn.Module):
 
 
 class UNet1_4(torch.nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,model_id,in_channels=3,out_channels=1):
 		super(UNet1_4,self).__init__()
 		self.model_name = 'unet1_4'
-		self.model_id = 
+		self.model_id = model_id
+
+		#FIRST LAYER
+		self.embedding = EmbeddingLayer(in_channels,16)
+
+		#ENCODER
+		self.encoder_1 = ConvBlock1(16,32,'B')
+		self.encoder_2 = ConvBlock1(32,64,'B')
+		self.encoder_3 = ConvBlock1(64,128,'B')
+		self.encoder_4 = ConvBlock1(128,256,'B')
+
+		#BOTTLENECK
+		self.bottleneck = Bottleneck1(256,256)
+
+		#DECODER
+		self.decoder_4 = UpBlock1_4(512,128)
+		self.decoder_3 = UpBlock1_4(256,64)
+		self.decoder_2 = UpBlock1_4(128,32)
+		self.decoder_1 = UpBlock1_4(64,16)
+
+		#LAST LAYER
+		self.out_layer = LastLayer(16,2)
 
 	def forward(self,x):
+		#ENCODER
+		out_0 = self.embedding(x)
+		out_1 = self.encoder_1(out_0)
+		out_2 = self.encoder_2(out_1)
+		out_3 = self.encoder_3(out_2)
+		out_4 = self.encoder_4(out_3)
+
+		#BOTTLENECK
+		out_5 = self.bottleneck(out_4)
+
+		#DECODER
+		out_6 = self.decoder_4(torch.cat([out_4,out_5],dim=1))
+		out_7 = self.decoder_3(torch.cat([out_3,out_6],dim=1))
+		out_8 = self.decoder_2(torch.cat([out_2,out_7],dim=1))
+		out_9 = self.decoder_1(torch.cat([out_1,out_8],dim=1))
+
+		#LAST LAYER
+		output = self.out_layer(out_9)
 		return output
 
 

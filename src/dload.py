@@ -41,21 +41,22 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 
 def get_split_indices():
-	if os.path.isfile('../cfg/training.txt') and os.path.isfile('../cfg/validation.txt'):
-	assert os.path.isfile('../cfg/training.txt'), "dload.py: NO TRAINING INDICES FILE FOUND."
-	assert os.path.isfile()
-		# ----- LOAD INDICES FROM PREVIOULY SAVED FILES
-		with open('../cfg/training.txt','r') as fp_tr:
-			lines = fp_tr.readlines()
-			training_idxs = [int(_.rstrip('\n')) for _ in lines]
+	# if os.path.isfile('../cfg/training.txt') and os.path.isfile('../cfg/validation.txt'):
+	assert os.path.isfile('../cfg/training.txt'), "dload.py: NO FILE FOUND FOR TRAINING INDICES."
+	assert os.path.isfile('../cfg/validation.txt'),"dload.py: NO FILE FOUND FOR VALIDATION INDICES."
+	assert os.path.isfile('../cfg/testing.txt'), "dload.py: NO FILE FOUND FOR TESTING INDICES."
+	# ----- LOAD INDICES FROM PREVIOULY SAVED FILES
+	with open('../cfg/training.txt','r') as fp_tr:
+		lines = fp_tr.readlines()
+		training_idxs = [int(_.rstrip('\n')) for _ in lines]
 
-		with open('../cfg/validation.txt','r') as fp_va:
-			lines = fp_va.readlines()
-			validation_idxs = [int(_.rstrip('\n')) for _ in lines]
+	with open('../cfg/validation.txt','r') as fp_va:
+		lines = fp_va.readlines()
+		validation_idxs = [int(_.rstrip('\n')) for _ in lines]
 
-		with open('../cfg/testing.txt','r') as fp_te:
-			lines = fp_te.readlines()
-			test_idxs = [int(_.rstrip('\n')) for _ in lines]
+	with open('../cfg/testing.txt','r') as fp_te:
+		lines = fp_te.readlines()
+		test_idxs = [int(_.rstrip('\n')) for _ in lines]
 
 	return training_idxs,validation_idxs,test_idxs
 
