@@ -132,7 +132,7 @@ class Bottleneck6(torch.nn.Module):
 class UNet1_1(torch.nn.Module):
     def __init__(self, model_id, in_channels=3, out_channels=1):
         super(UNet1_1, self).__init__()
-        #OTHER
+        #IDs
         self.model_name = 'unet1_1'
        	self.model_id   = model_id
 
@@ -203,8 +203,8 @@ class UNet1_2(torch.nn.Module):
 		self.embedding = EmbeddingLayer(in_channels,16)
 
 		#ENCODER
-		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False} #alt--mirror upconv
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 
 		self.encoder_1 = ConvBlock1(16,32,'A')
 		self.down_op_1 = torch.nn.Conv2d(32,32,**down_op_params) #only on HxW
 		self.encoder_2 = ConvBlock1(32,64,'A')
@@ -212,7 +212,7 @@ class UNet1_2(torch.nn.Module):
 		self.encoder_3 = ConvBlock1(64,128,'A')
 		self.down_op_3 = torch.nn.Conv2d(128,128,**down_op_params)
 		self.encoder_4 = ConvBlock1(128,256,'A')
-		self.down_op_4 = torch.nn.Conv2d(256,256,*down_op_params)
+		self.down_op_4 = torch.nn.Conv2d(256,256,**down_op_params)
 
 		#BOTTLENECK
 		self.bottleneck = Bottleneck1(256,512)
@@ -241,7 +241,7 @@ class UNet1_2(torch.nn.Module):
 		#BOTTLENECK
 		out_5 = self.bottleneck(self.down_op_4(out_4))
 
-		#ENCODER
+		#DECODER
 		out_6 = self.decoder_4(torch.cat([out_4,self.up_op_4(out_5)],dim=1))
 		out_7 = self.decoder_3(torch.cat([out_3,self.up_op_3(out_6)],dim=1))
 		out_8 = self.decoder_2(torch.cat([out_2,self.up_op_2(out_7)],dim=1))
@@ -249,21 +249,74 @@ class UNet1_2(torch.nn.Module):
 
 		#LAST LAYER
 		output = self.out_layer(out_9)
-
 		return output
 
 
 class UNet1_3(torch.nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,model_id,in_channels=3,out_channels=1):
 		super(UNet1_3,self).__init__()
+		self.model_name = 'unet1_3'
+		self.model_id = model_id
+
+		#FIRST LAYER
+		self.embedding = EmbeddingLayer(in_channels,32)
+
+		#ENCODER
+		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False}
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 		
+		self.encoder_1 = ConvBlock1(32,32,'A')
+		self.down_op_1 = torch.nn.Conv2d(32,64,**down_op_params)
+		self.encoder_2 = ConvBlock1(64,64,'A')
+		self.down_op_2 = torch.nn.Conv2d(64,128,**down_op_params)
+		self.encoder_3 = ConvBlock1(128,128,'A')
+		self.down_op_3 = torch.nn.Conv2d(128,256,**down_op_params)
+		self.encoder_4 = ConvBlock1(256,256,'A')
+		self.down_op_4 = torch.nn.Conv2d(256,512,**down_op_params)
+
+		#BOTTLENECK
+		self.bottleneck = Bottleneck1(512,512)
+
+		#DECODER
+		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+		self.up_op_4   = torch.nn.ConvTranspose2d(512,256,**up_op_params)
+		self.decoder_4 = ConvBlock1(512,512,'A')
+		self.up_op_3   = torch.nn.ConvTranspose2d(512,128,**up_op_params) #it gets weird here: C/4
+		self.decoder_3 = ConvBlock1(256,256,'A')
+		self.up_op_2   = torch.nn.ConvTranspose2d(256,64,**up_op_params)
+		self.decoder_2 = ConvBlock1(128,128,'A')
+		self.up_op_1   = torch.nn.ConvTranspose2d(128,32,**up_op_params)
+		self.decoder_1 = ConvBlock1(32,32,'A')
+
+		#LAST LAYER
+		self.out_layer = LastLayer(32,2)
 
 	def forward(self,x):
+		#ENCODER
+		out_0 = self.embedding(x)
+		out_1 = self.encoder_1(out_0)
+		out_2 = self.encoder_2(self.down_op_1(out_1))
+		out_3 = self.encoder_3(self.down_op_2(out_2))
+		out_4 = self.encoder_4(self.down_op_3(out_3))
+
+		#BOTTLENECK
+		out_5 = self.bottleneck(self.down_op_4(out_4))
+
+		#DECODER
+		out_6 = self.decoder_4(torch.cat([out_4,self.up_op_4(out_5)],dim=1))
+		out_7 = self.decoder_3(torch.cat([out_3,self.up_op_3(out_6)],dim=1))
+		out_8 = self.decoder_2(torch.cat([out_2,self.up_op_2(out_7)],dim=1))
+		out_9 = self.decoder_1(torch.cat([out_1,self.up_op_1(out_8)],dim=1))
+
+		#LAST LAYER
+		output = self.out_layer(out_9)
 		return output
 
 
 class UNet1_4(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet1_4,self).__init__()
+		self.model_name = 'unet1_4'
+		self.model_id = 
 
 	def forward(self,x):
 		return output

@@ -67,7 +67,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		############################################################		
 		t = tqdm(total=len(dataloaders['training']),ncols=80)
 
-		loss_sum    = 0.0
+		tr_loss_sum = 0.0
 		samples_ran = 0
 		model.train()
 
@@ -87,14 +87,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			optimizer.step()
 
 			# metrics
-			loss_sum = loss.item() * X.size(0)
+			tr_loss_sum = loss.item() * X.size(0)
 			samples_ran += X.size(0)			
 			Y = output.detach().cpu().numpy().max(axis=1)
 			T = T.detach().cpu().numpy()
 			M_tr.update(Y,T)
 
 			# update bar
-			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
+			t.set_postfix(loss='{:05.4f}'.format(tr_loss_sum/samples_ran))
 			t.update(1)
 		
 		t.close()
@@ -103,7 +103,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			scheduler.step()
 
 		# log training
-		loss_tr = loss_sum / N_tr
+		loss_tr = tr_loss_sum / N_tr
 		print(f'[T] loss: {loss_tr:.5f} | acc: {M_tr.acc():.5f} | iou: {M_tr.iou():.5f}')
 
 		
@@ -112,7 +112,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		############################################################
 		t = tqdm(total=len(dataloaders['validation']),ncols=80)
 
-		loss_sum    = 0.0
+		va_loss_sum = 0.0
 		samples_ran = 0
 		model.eval()
 
@@ -127,16 +127,16 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 				_,Y    = torch.max(output,1)
 
 			#metrics 
-			loss_sum = loss.item() * X.size(0)
+			va_loss_sum = loss.item() * X.size(0)
 			samples_ran += X.size(0)
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
 
-			t.set_postfix(loss='{:05.4f}'.format(loss_sum/samples_ran))
+			t.set_postfix(loss='{:05.4f}'.format(va_loss_sum/samples_ran))
 			t.update(1)
 
 		t.close()
 		# log validation
-		loss_va = loss_sum / N_va
+		loss_va = va_loss_sum / N_va
 		print(f'[V] loss: {loss_va:.5f} | acc: {M_va.acc():.5f} | iou: {M_va.iou():.5f}')
 
 		############################################################
