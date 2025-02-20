@@ -212,7 +212,7 @@ if __name__ == "__main__":
 		scheduler = None	
 
 	#DATALOADERS 
-	tr_idx,va_idx,te_idx = dload.get_split_indices(DATA_DIR)
+	tr_idx,va_idx,te_idx = dload.get_split_indices()
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
 	va_dataset = torch.utils.data.Subset(dataset,va_idx)
