@@ -166,27 +166,30 @@ class UNet1_1(torch.nn.Module):
 
     def forward(self, x):
         # ENCODER
-        x  = self.embedding(x)
-        o1 = self.encoder_1(x)
-        o2 = self.encoder_2(self.down_op_1(o1))
-        o3 = self.encoder_3(self.down_op_2(o2))
-        o4 = self.encoder_4(self.down_op_3(o3))
+        out_0  = self.embedding(x)
+        out_1 = self.encoder_1(out_0)
+        out_2 = self.encoder_2(self.down_op_1(out_1))
+        out_3 = self.encoder_3(self.down_op_2(out_2))
+        out_4 = self.encoder_4(self.down_op_3(out_3))
         
         # BOTTLENECK
-        o5 = self.bottleneck(self.down_op_4(o4))
+        out_5 = self.bottleneck(self.down_op_4(out_4))
         
         # DECODER
-        i4 = self.up_op_4(o5)
-        o6 = self.decoder_4(torch.cat([o4,i4],dim=1))
-        i3 = self.up_op_3(o6)
-        o7 = self.decoder_3(torch.cat([o3,i3],dim=1))
-        i2 = self.up_op_2(o7)
-        o8 = self.decoder_2(torch.cat([o2,i2],dim=1))
-        i1 = self.up_op_1(o8)
-       	o9 = self.decoder_1(torch.cat([o1,i1],dim=1)) 
+        inp_4 = self.up_op_4(out_5)
+        out_6 = self.decoder_4(torch.cat([out_4,inp_4],dim=1))
+
+        inp_3 = self.up_op_3(out_6)
+        out_7 = self.decoder_3(torch.cat([out_3,inp_3],dim=1))
+        
+        inp_2 = self.up_op_2(out_7)
+        out_8 = self.decoder_2(torch.cat([out_2,inp_2],dim=1))
+        
+        inp_1 = self.up_op_1(out_8)
+       	out_9 = self.decoder_1(torch.cat([out_1,inp_1],dim=1)) 
 
         # FINAL LAYER
-        output = self.out_layer(o9)
+        output = self.out_layer(out_9)
         
         return output
 

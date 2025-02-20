@@ -212,7 +212,7 @@ def sequence_hyperparameters(id_start): #-----------------------------------> TO
 	# model     = ["unet1_1","attn"]
 
 	# Cross-product
-	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,["random"],["unet1_1"]))
+	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,init,model))
 
 	for i in range(len(hp0)):
 		row_dict = {}

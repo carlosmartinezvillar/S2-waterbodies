@@ -26,7 +26,7 @@ parser.add_argument('--data-dir',default=None,required=True,help='Dataset direct
 parser.add_argument('-z','--zones',action='store_true',help='Choose tiles by drawing from different UTM zones.')
 
 DEFAULT_SEED = 476
-
+SET_NR_TILES = 3
 
 if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 
@@ -39,9 +39,9 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 	band_files  = sorted(glob.glob("*_B0X.tif",root_dir=args.data_dir))
 	# label_files = sorted(glob.glob("*_LBL.tif",root_dir=chip_dir))	
 	chips       = [_[0:-8] for _ in band_files] #19456 X 53
-	all_rasters = [i[0:-11] for i in chips]   #19456 x 42
-	all_tiles   = [i[-16:-11] for i in chips] #19456 x 6
-	all_zones   = [i[-16:-13] for i in chips] #19456 x 3
+	all_rasters = np.array([i[0:-11] for i in chips])   #19456 x 42
+	all_tiles   = np.array([i[-16:-11] for i in chips]) #19456 x 6
+	all_zones   = np.array([i[-16:-13] for i in chips]) #19456 x 3
 
 	c_per_r_str, c_per_r_cnt = np.unique(all_rasters,return_counts=True) #726 x 42
 	c_per_t_str, c_per_t_cnt = np.unique(all_tiles,return_counts=True)   #21 x 6
@@ -51,7 +51,7 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 	t_per_z_str, t_per_z_cnt = np.unique([_[0:3] for _ in r_per_t_str],return_counts=True) #6 x 3
 
 	#CHOOSE TWO ZONES
-	test_zones = np.random.choice(c_per_z_str,2,replace=False)
+	test_zones = np.random.choice(c_per_z_str,SET_NR_TILES,replace=False)
 
 	#CHOOSE A TILE FOR EACH ZONE
 	test_mask = []
@@ -63,7 +63,9 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 		test_mask.append(tile_mask)
 
 	# TEST SET -- UNION/OR OP OF TWO TILES SELECTED
-	test_mask = test_mask[0] + test_mask[1] #19456
+	# test_mask = test_mask[0] + test_mask[1] + test_mask[2] #19456
+	# test_mask = np.sum(test_mask,axis=0)
+	test_mask = np.row_stack(test_mask).any(axis=0)
 	test_idxs = np.where(test_mask)[0]
 
 	# NEW TRAINING/VALIDATION DATASET
@@ -71,7 +73,7 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 
 	#VALIDATION SET -- CHOOSE 2 TILES AT RANDOM
 	trva_tiles    = np.array(all_tiles)[trva_set_mask]
-	validation_tiles = np.random.choice(np.unique(trva_tiles),2,replace=False)
+	validation_tiles = np.random.choice(np.unique(trva_tiles),SET_NR_TILES,replace=False)
 	validation_mask  = np.isin(all_tiles,validation_tiles)
 	validation_idxs  = np.where(validation_mask)[0]
 
@@ -92,3 +94,13 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 		for i in test_idxs:
 			fp_te.write(str(i) + '\n')
 
+
+	test_tiles = np.unique(all_tiles[test_mask])
+	train_tiles = np.unique(all_tiles[training_mask])
+	with open('../cfg/split_summary.txt','w+') as fp:
+		fp.write(f"TEST TILES:       {test_tiles}\n")
+		fp.write(f"VALIDATION TILES: {validation_tiles}\n")
+		fp.write(f"TRAIN TILES:      {train_tiles}")
+	print(f"TEST TILES:       {test_tiles}")
+	print(f"VALIDATION TILES: {validation_tiles}")
+	print(f"TRAIN TILES:      {train_tiles}")

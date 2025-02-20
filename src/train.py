@@ -34,7 +34,7 @@ required.add_argument('--row',required=True,type=int,default=0,
 	help='Row number in the given file for hyperparameters.')
 optional.add_argument('--seed',required=False,action='store_true',
 	help='Fix the random seed of imported modules for reproducibility.')
-optional.add_argument('--gpu',required=False,)
+optional.add_argument('--gpu',type=int,required=False,default=0)
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -143,7 +143,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		# LOG EPOCH
 		############################################################
 		epoch_time = time.time() - epoch_start_time
-		print(f'Epoch time: {epoch_time:.2f}s')
+		print(f'\nEpoch time: {epoch_time:.2f}s')
 		epoch_log = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
 		epoch_logger.log(epoch_log)
 
@@ -154,9 +154,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			best_epoch = epoch
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
-		print(f'\nBest validation IoU: {best_iou:.4f}')
+		print(f'Best validation IoU: {best_iou:.4f}')
 		total_time = time.time() - total_start_time
-		print(f'\nTotal time: {total_time:.2f}')
+		print(f'Total time: {total_time:.2f}')
 
 
 if __name__ == "__main__":

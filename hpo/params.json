@@ -1,6 +1,6 @@
 [
-{"ID":0, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_1"},
-{"ID":1, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_2"},
-{"ID":1, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_3"},
-{"ID":1, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":8,"INIT":"random","MODEL":"unet1_4"}
+{"ID":1, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_1"},
+{"ID":2, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_2"},
+{"ID":3, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_3"},
+{"ID":4, "LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_4"}
 ]
