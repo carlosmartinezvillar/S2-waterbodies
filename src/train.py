@@ -15,7 +15,7 @@ import dload
 ####################################################################################################
 # SET GLOBAL VARS FROM ENV ET CETERA ET CETERA
 ####################################################################################################
-cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
+# cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
 
 __spec__ = None # DEBUG with tqdm -- temp.
 
@@ -34,7 +34,7 @@ required.add_argument('--row',required=True,type=int,default=0,
 	help='Row number in the given file for hyperparameters.')
 optional.add_argument('--seed',required=False,action='store_true',
 	help='Fix the random seed of imported modules for reproducibility.')
-optional.add_argument('--gpu',type=int,required=False,default=0)
+optional.add_argument('--gpu',required=False,type=int,default=0)
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -161,18 +161,27 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
-	# LOAD AND PARSE HP DICT
+	#---------- LOAD AND PARSE HP DICT ----------
+	#some checks
 	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
-
 	with open(args.params,'r') as fp:
 		HP_LIST = json.load(fp)
-	
-	assert len(HP_LIST) > 0, "train.py: EMPTY JSON FILE"
-	assert 0 <= args.row < len(HP_LIST), "train.py: ROW arg OUT OF RANGE" #0-indexed
-	
+	assert len(HP_LIST) > 0, "train.py: GOT EMPTY JSON FILE."
+	assert 0 <= args.row < len(HP_LIST), "train.py: OUT OF RANGE ROW ARGUMENT." #0-indexed
+
+	#load dictionary
 	HP = HP_LIST[args.row]
 
-	# MODEL
+	#---------- GPU (IF SET) ----------
+	assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
+	
+	### ASSIGN HERE- ----> TODO
+	cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
+
+
+
+
+	#---------- MODEL ----------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["attn","unet"], "train.py: INCORRECT MODEL STRING."
 	if model_str == 'unet':
@@ -183,7 +192,7 @@ if __name__ == "__main__":
 	# MODEL -- TO GPU
 	net = net.to(cuda_device) #checked above
 
-	# LOSS
+	#---------- LOSS ----------
 	assert HP['LOSS'] in ["ce","ew","cw"], "train.py: INCORRECT STRING FOR LOSS IN DICT."
 	if HP['LOSS'] == "ce":
 		loss_fn = torch.nn.CrossEntropyLoss()
@@ -193,7 +202,7 @@ if __name__ == "__main__":
 		loss_fn = None
 
 
-	# OPTIMIZER
+	#---------- OPTIMIZER ----------
 	assert HP["OPTIM"] in ["adam","lamb"], "train.py: INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
@@ -201,7 +210,7 @@ if __name__ == "__main__":
 		optimizer = None
 
 
-	# LEARNING RATE SCHEDULER
+	#---------- LEARNING RATE SCHEDULER ----------
 	if HP['SCHEDULER'] == "step":
 		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.1)
 	elif HP['SCHEDULER'] == "linear":
@@ -211,15 +220,15 @@ if __name__ == "__main__":
 	else:
 		scheduler = None	
 
-	#DATALOADERS 
+	#---------- SET ALL SEEDS ----------
+	if args.seed is True:
+		utils.set_seed(476)	
+
+	#---------- DATALOADERS ----------
 	tr_idx,va_idx,te_idx = dload.get_split_indices()
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
 	va_dataset = torch.utils.data.Subset(dataset,va_idx)
-
-	# SET ALL SEEDS
-	if args.seed is True:
-		utils.set_seed(476)	
 
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
@@ -228,7 +237,6 @@ if __name__ == "__main__":
 			drop_last=False,shuffle=False,num_workers=2)
 	}
 
-
-	# RUN
+	#---------- RUN ----------
 	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=50)
 

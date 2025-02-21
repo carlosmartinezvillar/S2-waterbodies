@@ -45,7 +45,8 @@ def get_split_indices():
 	assert os.path.isfile('../cfg/training.txt'), "dload.py: NO FILE FOUND FOR TRAINING INDICES."
 	assert os.path.isfile('../cfg/validation.txt'),"dload.py: NO FILE FOUND FOR VALIDATION INDICES."
 	assert os.path.isfile('../cfg/testing.txt'), "dload.py: NO FILE FOUND FOR TESTING INDICES."
-	# ----- LOAD INDICES FROM PREVIOULY SAVED FILES
+
+	# LOAD INDICES FROM PREVIOULY SAVED FILES
 	with open('../cfg/training.txt','r') as fp_tr:
 		lines = fp_tr.readlines()
 		training_idxs = [int(_.rstrip('\n')) for _ in lines]

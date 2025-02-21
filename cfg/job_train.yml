@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: train-job
+  name: train-job-0
 spec:
 
   template:
@@ -14,12 +14,12 @@ spec:
 
           resources:
             limits:
-              memory: 48Gi
+              memory: 32Gi
               cpu: 8
               nvidia.com/gpu: 1
               ephemeral-storage: 50Gi 
             requests:
-              memory: 48Gi
+              memory: 32Gi
               cpu: 8
               nvidia.com/gpu: 1
               ephemeral-storage: 50Gi
@@ -45,7 +45,7 @@ spec:
             mkdir /cache/model;
             mkdir /cache/logs;
             cd S2-waterbodies/src;
-            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
+            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --seed --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
             cp /cache/logs/*.tsv /log_pvc;
 
@@ -53,7 +53,7 @@ spec:
       - name: cache-vol
         emptyDir:
           sizeLimit: 50G
-          medium: Memory
+          # medium: Memory
 
       - name: zipped-vol
         persistentVolumeClaim:
