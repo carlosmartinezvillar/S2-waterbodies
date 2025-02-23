@@ -193,23 +193,35 @@ def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	return HP
 
 
-def sequence_hyperparameters(id_start): #-----------------------------------> TODO
+def sequence_hyperparameters(id_start,out_path):
+	'''
+	Create a list of dict elements each containing a model's hyperparameters.
+	The list is stored in out_path in .json format and created using the 
+	'cross-product' (all-by-all) of the parameters provided.
+	'''
 	HP = []
 
 	# Each parameter
-	lrate     = [0.1,0.01,0.001,0.0001]	
-	sched     = ["step","linear","exp"]
-	optim     = ["adam","lamb"]
-	loss      = ["ce"]
-	# loss      = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
-	batch     = [16,32,64]
-	init      = ["random"]
-	# init      = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
-	model     = ["unet1_1"]
-	# model     = ["unet1_1","unet1_2","unet1_3","unet1_4","unet2_1","unet2_2","unet2_3","unet2_4",
-	# 			"unet3_1","unet4_1","unet4_2","unet4_3","unet4_4","unet5_1","unet5_2","unet5_3",
-	# 			"unet5_4","unet6_1"]
-	# model     = ["unet1_1","attn"]
+	lrate = [0.1,0.01,0.001,0.0001]	
+
+	sched = ["step","linear","exp"]
+
+	optim = ["adam","lamb"]
+
+	loss  = ["ce"]
+	# loss  = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
+
+	batch = [16]
+	# batch = [16,32,64]
+
+	init  = ["random"]
+	# init  = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
+
+	model = ["unet1_1"]
+	# model   = ["unet1_1","unet1_2","unet1_3","unet1_4","unet2_1","unet2_2","unet2_3","unet2_4",
+	# 	"unet3_1","unet4_1","unet4_2","unet4_3","unet4_4","unet5_1","unet5_2","unet5_3",
+	# 	"unet5_4","unet6_1"]
+
 
 	# Cross-product
 	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,init,model))

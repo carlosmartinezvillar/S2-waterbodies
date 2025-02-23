@@ -178,6 +178,7 @@ if __name__ == "__main__":
 	### ASSIGN HERE- ----> TODO
 	cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
 
+	cuda_dev
 
 
 
@@ -188,8 +189,7 @@ if __name__ == "__main__":
 		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
 	if model_str == 'attn':
 		pass
-
-	# MODEL -- TO GPU
+	# ---> TO GPU
 	net = net.to(cuda_device) #checked above
 
 	#---------- LOSS ----------
