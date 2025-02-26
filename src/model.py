@@ -382,7 +382,7 @@ class UNet1_4(torch.nn.Module):
 		output = self.out_layer(out_9)
 		return output
 
-
+#TODO
 class UNet2_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet2_1,self).__init__()
@@ -390,7 +390,7 @@ class UNet2_1(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet2_2(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet2_2,self).__init__()
@@ -398,7 +398,7 @@ class UNet2_2(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet2_3(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet2_3,self).__init__()
@@ -406,7 +406,7 @@ class UNet2_3(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet2_4(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet2_4,self).__init__()
@@ -414,7 +414,7 @@ class UNet2_4(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet3_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet3_1,self).__init__()
@@ -423,6 +423,7 @@ class UNet3_1(torch.nn.Module):
 		return output
 
 #--- 3 LAYERS ---
+#TODO
 class UNet4_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet4_1,self).__init__()
@@ -430,7 +431,7 @@ class UNet4_1(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet4_2(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet4_2,self).__init__()
@@ -438,7 +439,7 @@ class UNet4_2(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet4_3(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet4_3,self).__init__()
@@ -446,7 +447,7 @@ class UNet4_3(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet4_4(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet4_4,self).__init__()
@@ -454,7 +455,7 @@ class UNet4_4(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet5_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet5_1,self).__init__()
@@ -462,7 +463,7 @@ class UNet5_1(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet5_2(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet5_2,self).__init__()
@@ -470,7 +471,7 @@ class UNet5_2(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet5_3(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet5_3,self).__init__()
@@ -478,7 +479,7 @@ class UNet5_3(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet5_4(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet5_4,self).__init__()
@@ -486,7 +487,7 @@ class UNet5_4(torch.nn.Module):
 	def forward(self,x):
 		return output
 
-
+#TODO
 class UNet6_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet3_1,self).__init__()
