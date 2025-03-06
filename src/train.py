@@ -40,6 +40,7 @@ args = parser.parse_args()
 DATA_DIR  = args.data_dir
 LOG_DIR   = args.log_dir
 MODEL_DIR = args.net_dir
+CUDA_DEV  = None
 
 ####################################################################################################
 # TRAININING+VALIDATION
@@ -73,8 +74,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		for X,T in dataloaders['training']:
 
-			X = X.to(cuda_device,non_blocking=True)
-			T = T.to(cuda_device,non_blocking=True)
+			X = X.to(CUDA_DEV,non_blocking=True)
+			T = T.to(CUDA_DEV,non_blocking=True)
 
 			# forward-pass
 			with torch.set_grad_enabled(True):
@@ -118,8 +119,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		for X,T in dataloaders['validation']:
 
-			X = X.to(cuda_device,non_blocking=True)
-			T = T.to(cuda_device,non_blocking=True)
+			X = X.to(CUDA_DEV,non_blocking=True)
+			T = T.to(CUDA_DEV,non_blocking=True)
 
 			with torch.set_grad_enabled(False):
 				output = model(X)
@@ -173,13 +174,14 @@ if __name__ == "__main__":
 	HP = HP_LIST[args.row]
 
 	#---------- GPU (IF SET) ----------
-	assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
+	# assert torch.cuda.is_available(), "train.py: torch.cuda.is_available() returned False"
+	# assert torch.cuda.device_count() > 0, "train.py: number of CUDA devices is zero."
+	# assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
 	
-	### ASSIGN HERE- ----> TODO
-	cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
-
-	cuda_dev
-
+	if torch.cuda.is_available():
+		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
+	else:
+		CUDA_DEV = torch.device("cpu")
 
 
 	#---------- MODEL ----------
@@ -190,7 +192,7 @@ if __name__ == "__main__":
 	if model_str == 'attn':
 		pass
 	# ---> TO GPU
-	net = net.to(cuda_device) #checked above
+	net = net.to(CUDA_DEV) #checked above
 
 	#---------- LOSS ----------
 	assert HP['LOSS'] in ["ce","ew","cw"], "train.py: INCORRECT STRING FOR LOSS IN DICT."

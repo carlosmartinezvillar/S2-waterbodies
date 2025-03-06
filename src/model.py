@@ -23,7 +23,7 @@ class ResBlock(torch.nn.Module):
 		return out
 
 ################################################################################
-
+#ALL
 class EmbeddingLayer(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(EmbeddingLayer,self).__init__()
@@ -31,7 +31,6 @@ class EmbeddingLayer(torch.nn.Module):
 
 	def forward(self,x):
 		return self.conv(x)
-
 
 class LastLayer(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
@@ -42,6 +41,7 @@ class LastLayer(torch.nn.Module):
 		return self.conv(x)
 
 
+#UNet1_x
 class ConvBlock1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch,block_type):
 		super(ConvBlock1,self).__init__() #-----> switch params to dict and then iterate to set layers :TODO:
@@ -68,8 +68,12 @@ class ConvBlock1(torch.nn.Module):
 		x = self.R2(x)
 		return x
 
-
 class UpBlock1_4(torch.nn.Module):
+	'''
+	Class needed for UNet1_4. The first convolution is a transpose doubling HxW.
+	This avoids an additional upscale operation outside the block (mirroring the downblocks in
+	this particular model).
+	'''
 	def __init__(self,i_ch,o_ch):
 		super(UpBlock1_4,self).__init__()
 		# conv1_params = {'kernel_size':2,'stride':2,'padding':0,'output_padding':0,'bias':False}
@@ -90,7 +94,6 @@ class UpBlock1_4(torch.nn.Module):
 		x = self.R2(x)
 		return x
 
-
 class Bottleneck1(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(Bottleneck1,self).__init__()
@@ -100,17 +103,71 @@ class Bottleneck1(torch.nn.Module):
 		return self.BLOCK(x)
 
 
+#UNet2_x
+class ConvBlock2(torch.nn.Module):
+	def __init__(self,i_ch,o_ch,block_type):
+		super(ConvBlock2,self).__init__()
+
+		if block_type == 'A':
+			# HALF-PADDING/STRIDE 1 CONVOLUTION
+			init_stride = 1
+		elif block_type == 'B':
+			# STRIDE 2 CONVOLUTION (HALVE HxW) -- strictly for 1_4
+			init_stride = 2
+		else:
+			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
+
+		self.C1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=init_stride,padding=1,bias=False)
+		self.B1 = torch.nn.BatchNorm2d(o_ch)
+		self.R1 = torch.nn.ReLU(inplace=True)
+		self.C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B2 = torch.nn.BatchNorm2d(o_ch)
+		self.R2 = torch.nn.ReLU(inplace=True)
+
+	def forward(self,x):
+		x = self.C1(x)
+		x = self.B1(x)
+		x = self.R1(x)
+		res = x.clone()
+		x = self.C2(x)
+		x = self.B2(x)
+		x = self.R2(x)
+		return x + res
+
 class Bottleneck2(torch.nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck2,self).__init__()
-		self.conv1 = torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
-		self.conv2 = torch.nn.Conv2d(i_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.BLOCK = ConvBlock2(i_ch,o_ch,'A')
 
 	def forward(self,x):
-		o1 = self.conv1(x)
-		return self.conv2(o1) + o1
+		return self.BLOCK(x)
+
+class UpBlock2_4(torch.nn.Module):
+	'''
+	Class needed for UNet2_4.
+	'''
+	def __init__(self,i_ch,o_ch):
+		super(UpBlock2_4,self).__init__()
+		conv1_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}
+		self.C1 = torch.nn.ConvTranspose2d(i_ch,o_ch,**conv1_params)
+		self.B1 = torch.nn.BatchNorm2d(o_ch)
+		self.R1 = torch.nn.ReLU(inplace=True)
+		self.C2 = torch.nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B2 = torch.nn.BatchNorm2d(o_ch)
+		self.R2 = torch.nn.ReLU(inplace=True)
+
+	def forward(self,x):
+		x = self.C1(x)
+		x = self.B1(x)
+		x = self.R1(x)
+		res = x.clone()
+		x = self.C2(x)
+		x = self.B2(x)
+		x = self.R2(x)
+		return x + res
 
 
+#UNet3_x
 class Bottleneck3(torch.nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck3,self).__init__()
@@ -119,7 +176,7 @@ class Bottleneck3(torch.nn.Module):
 	def forward(self,x):
 		return self.layers(x)
 
-
+#UNet4_x
 class Bottleneck4(torch.nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck4,self).__init__()
@@ -129,6 +186,7 @@ class Bottleneck4(torch.nn.Module):
 		return self.layers(x)
 
 
+#UNet5_x
 class Bottleneck5(torch.nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck5,self).__init__()
@@ -138,6 +196,7 @@ class Bottleneck5(torch.nn.Module):
 		return self.layers(x)
 
 
+# UNet6_x
 class Bottleneck6(torch.nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck6,self).__init__()
@@ -358,7 +417,7 @@ class UNet1_4(torch.nn.Module):
 		self.decoder_2 = UpBlock1_4(128,32)
 		self.decoder_1 = UpBlock1_4(64,16)
 
-		#LAST LAYER
+		#LAST LAYERS
 		self.out_layer = LastLayer(16,2)
 
 	def forward(self,x):
@@ -386,8 +445,65 @@ class UNet1_4(torch.nn.Module):
 class UNet2_1(torch.nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet2_1,self).__init__()
+		#IDs
+		self.model_name = 'unet2_1'
+		self.model_id   = model_id
+
+		# FIRST LAYER
+		self.embedding  = EmbeddingLayer(in_channels,16)
+
+		# ENCODER
+		# features = [16,32,64,128,256,512]
+		self.encoder_1 = ConvBlock2(16,32,'A')
+		self.down_op_1 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+		self.encoder_2 = ConvBlock2(32,64,'A')
+		self.down_op_2 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+		self.encoder_3 = ConvBlock2(64,128,'A')
+		self.down_op_3 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+		self.encoder_4 = ConvBlock2(128,256)
+		self.down_op_4 = torch.nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+
+		# BOTTLENECK
+		self.bottleneck = Bottleneck2(256,512)
+
+		# DECODER
+		# features = [512,256,128,64,32]
+		self.up_op_4   = torch.nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
+		self.decoder_4 = ConvBlock2(512,256,'A')
+		self.up_op_3   = torch.nn.ConvTranspose2d(256,128,kernel_size=2,stride=2,bias=False)
+		self.decoder_3 = ConvBlock2(256,128,'A')
+		self.up_op_2   = torch.nn.ConvTranspose2d(128,64,kernel_size=2,stride=2,bias=False)
+		self.decoder_2 = ConvBlock2(128,64,'A')
+		self.up_op_1   = torch.nn.ConvTranspose2d(64,32,'A')
+		self.decoder_1 = ConvBlock2(64,32,'A')
+
+		# LAST LAYER
+		self.out_layer = LastLayer(32,2)
 
 	def forward(self,x):
+		#ENCODER
+		out_0 = self.embedding(x)
+		out_1 = self.encoder_1(out_0)
+		out_2 = self.encoder_2(self.down_op_1(out_1))
+		out_3 = self.encoder_3(self.down_op_2(out_2))
+		out_4 = self.encoder_4(self.down_op_3(out_3))
+
+		#BOTTLENECK
+		out_5 = self.bottleneck(self.down_op_4(out_4))
+
+		#DECODER
+		inp_4 = self.up_op_4(out_5)
+		out_6 = self.decoder_4(torch.cat([out_4,inp_4],dim=1))
+		inp_3 = self.up_op_3(out_6)
+		out_7 = self.decoder_3(torch.cat([out_3,inp_3],dim=1))
+		inp_2 = self.up_op_2(out_7)
+		out_8 = self.decoder_2(torch.cat([out_2,inp_2],dim=1))
+		inp_1 = self.up_op_1(out_8)
+		out_9 = self.decoder_1(torch.cat([out_1,inp_1],dim=1))
+
+		# LAST LAYER
+		output = self.out_layer(out_9)
+
 		return output
 
 #TODO
