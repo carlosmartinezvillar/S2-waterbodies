@@ -32,8 +32,8 @@ required.add_argument('--params',required=True,default='../hpo/parameters.json',
 	help='Path to file listing hyperparameters.')
 required.add_argument('--row',required=True,type=int,default=0,
 	help='Row number in the given file for hyperparameters.')
-optional.add_argument('--seed',required=False,action='store_true',
-	help='Fix the random seed of imported modules for reproducibility.')
+# optional.add_argument('--seed',required=False,action='store_true',
+	# help='Fix the random seed of imported modules for reproducibility.') --> moved to HParams
 optional.add_argument('--gpu',required=False,type=int,default=0)
 args = parser.parse_args()
 
@@ -223,7 +223,8 @@ if __name__ == "__main__":
 		scheduler = None	
 
 	#---------- SET ALL SEEDS ----------
-	if args.seed is True:
+	assert HP['SEED'] in (0,1), "train.py: INCORRECT SEED IN JSON PARAMETER DICT."
+	if HP['SEED'] == True:
 		utils.set_seed(476)	
 
 	#---------- DATALOADERS ----------
