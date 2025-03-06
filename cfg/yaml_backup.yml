@@ -37,6 +37,9 @@ spec:
             - mountPath: /model_pvc
               name: model-vol
 
+            - mountPath: /dev/shm
+              name: dshm     
+
           command: ["/bin/sh","-c"]
           args:
           - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
@@ -45,7 +48,7 @@ spec:
             mkdir /cache/model;
             mkdir /cache/logs;
             cd S2-waterbodies/src;
-            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --seed --row 0;
+            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
             cp /cache/logs/*.tsv /log_pvc;
 
@@ -66,6 +69,10 @@ spec:
       - name: model-vol
         persistentVolumeClaim:
           claimName: lake-weights
+
+      - name: dshm
+        emptyDir:
+          medium: Memory
 
       restartPolicy: Never
 
