@@ -326,7 +326,7 @@ class UNet1_2(torch.nn.Module):
 		out_6 = self.decoder_4(torch.cat([out_4,self.up_op_4(out_5)],dim=1))
 		out_7 = self.decoder_3(torch.cat([out_3,self.up_op_3(out_6)],dim=1))
 		out_8 = self.decoder_2(torch.cat([out_2,self.up_op_2(out_7)],dim=1))
-		out_9 = self.decoder_1(torch.cat([ou1_1,self.up_op_1(out_8)],dim=1))
+		out_9 = self.decoder_1(torch.cat([out_1,self.up_op_1(out_8)],dim=1))
 
 		#LAST LAYER
 		output = self.out_layer(out_9)
@@ -366,10 +366,10 @@ class UNet1_3(torch.nn.Module):
 		self.up_op_2   = torch.nn.ConvTranspose2d(256,64,**up_op_params)
 		self.decoder_2 = ConvBlock1(128,128,'A')
 		self.up_op_1   = torch.nn.ConvTranspose2d(128,32,**up_op_params)
-		self.decoder_1 = ConvBlock1(32,32,'A')
+		self.decoder_1 = ConvBlock1(64,64,'A')
 
 		#LAST LAYER
-		self.out_layer = LastLayer(32,2)
+		self.out_layer = LastLayer(64,2)
 
 	def forward(self,x):
 		#ENCODER
