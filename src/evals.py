@@ -47,6 +47,13 @@ def plot_training_log(log_path,out_dir):
 		plt.savefig(f'{out_dir}/metrics_{model_nr}.png')
 
 
+def find_best_epoch(log_path,metric='iou')
+	'''
+	Iterate thru epochs in a model's log to find the best performer for
+	this particular model (best epoch).
+	'''
+	pass
+
 def find_best_performer(log_dir,metric='iou'):
 	'''
 	Iterate thru logs and find the best model by IoU.
@@ -59,6 +66,15 @@ def find_best_performer(log_dir,metric='iou'):
 		pass
 	if metric == 'tpr':
 		pass
+
+
+def match_parameter_performance():
+	'''
+	A function that matches model performance and the parameters that yielded
+	that performance. Takes (i) a dict (row) in the JSON list of hyperparams.
+	And (ii) a row in the training log (the best performer across epochs).
+	'''
+	pass
 
 
 def plot_all_models():
