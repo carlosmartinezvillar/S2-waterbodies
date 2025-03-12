@@ -1,28 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-
-class ResBlock(torch.nn.Module):
-	def __init__(self,i_ch,o_ch):
-		super(ResBlock,self).__init__()
-		self.conv1 = torch.nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
-		self.bn1   = torch.nn.BatchNorm2d(o_ch)
-		self.relu1 = torch.nn.ReLU(inplace=True)
-		self.conv2 = torch.nn.Conv2d(o_ch,i_ch,kernel_size=3,stride=1,padding=1,bias=False)
-		self.bn2   = torch.nn.BatchNorm2d(i_ch)
-		self.relu2 = torch.nn.ReLU(inplace=True)
-
-	def forward(self,x):
-		out = self.conv1(x)
-		out = self.bn1(out)
-		out = self.relu1(out)
-		out = self.conv2(out)
-		out = self.bn2(out)
-		out = self.relu2(out)
-		out = out + x 
-		return out
-
-################################################################################
 #ALL
 class EmbeddingLayer(torch.nn.Module):
 	def __init__(self,i_ch,o_ch):
