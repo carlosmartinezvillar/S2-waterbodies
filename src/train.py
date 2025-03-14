@@ -157,7 +157,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 		print(f'Best validation IoU: {best_iou:.4f}')
 		total_time = time.time() - total_start_time
-		print(f'Total time: {total_time:.2f}')
+		print(f'Total time: {total_time:.2f}s')
 
 
 if __name__ == "__main__":
