@@ -63,6 +63,7 @@ def get_split_indices():
 
 
 def preprocess_potsdam():
+	CHP_SIZE = 512
 	pass
 
 def preprocess_loveda():
