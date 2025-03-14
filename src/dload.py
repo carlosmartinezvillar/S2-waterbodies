@@ -62,5 +62,14 @@ def get_split_indices():
 	return training_idxs,validation_idxs,test_idxs
 
 
+def preprocess_potsdam():
+	pass
+
+def preprocess_loveda():
+	pass
+
+def preprocess_isaid():
+	pass
+
 if __name__ == '__main__':
 	print('-> dload.py')
