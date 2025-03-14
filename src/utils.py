@@ -118,6 +118,20 @@ class ConfusionMatrix():
 			self.FN = self.M.sum(axis=1) - self.TP
 			self.TN = self.M.sum() - self.TP - self.FP - self.FN
 
+
+			# <------------------------------------ TODO: TEST THIS
+		if self.n_classes > 3:
+			for k in range(n_classes*n_classes):
+				i = k // n_classes
+				j = k % n_classes
+
+				self.M[i,j] += ((T==i) & (Y==j)).sum()
+
+				self.TP = self.M.diagonal()
+				self.FP = self.M.sum(axis=0) - self.TP
+				self.FN = self.M.sum(axis=1) - self.TP
+				self.TN = self.M.sum() - self.TP - self.FP - self.FN
+
 	def ppv(self):
 		# Precision -- predictive positive rate
 		return self.TP/(self.TP + self.FP + self.epsilon)
@@ -131,7 +145,10 @@ class ConfusionMatrix():
 		return (self.TP+self.TN)/(self.TP+self.FN+self.FP+self.TN+self.epsilon)
 
 	def iou(self,reverse=False):
-		# Intersection over union, jaccard index, critical success index, whatever...
+		'''
+		Intersection over union, jaccard index,
+		critical success index, whatever you wanna call it...
+		'''
 		if self.n_classes==2 and reverse:
 			# land iou--maybe useful for 2-class
 			return self.TN/(self.TN+self.FN+self.FP+self.epsilon)
