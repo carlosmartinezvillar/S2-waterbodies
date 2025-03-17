@@ -40,7 +40,43 @@ class SentinelDataset(torch.utils.data.Dataset):
 		return img,lbl
 
 
-def get_split_indices():
+class PotsdamDataset(torch.utils.data.Dataset):
+	def __init__(self,root_dir):
+		pass
+
+	def __len__(self):
+		pass
+
+	def __getitem__(self,i):
+		pass
+		return
+
+
+class LoveDADataset(torch.utils.data.Dataset):
+	def __init__(self,root_dir):
+		pass
+
+	def __len__(self):
+		pass
+
+	def __getitem__(self,i):
+		pass
+		return
+
+
+class iSaidDataset(torch.utils.data.Dataset):
+	def __init__(self,root_dir):
+		pass
+
+	def __len__(self):
+		pass
+
+	def __getitem__(self,i):
+		pass
+		return
+
+
+def sentinel_split_indices():
 	# if os.path.isfile('../cfg/training.txt') and os.path.isfile('../cfg/validation.txt'):
 	assert os.path.isfile('../cfg/training.txt'), "dload.py: NO FILE FOUND FOR TRAINING INDICES."
 	assert os.path.isfile('../cfg/validation.txt'),"dload.py: NO FILE FOUND FOR VALIDATION INDICES."
@@ -74,3 +110,4 @@ def preprocess_isaid():
 
 if __name__ == '__main__':
 	print('-> dload.py')
+	### TEST DATALOADERS --- TODO

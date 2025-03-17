@@ -11,6 +11,9 @@ import itertools
 import random
 
 ####################################################################################################
+# CLASSES
+####################################################################################################
+
 class Logger():
 	def __init__(self,path,head):
 		'''
@@ -159,21 +162,12 @@ class ConfusionMatrix():
 		self.TP = self.FP = self.FN = self.TN = 0
 
 	def __call__(self):
-		print(self.table)
-		print(type(self.table))
+		print(self.M)
+		print(type(self.M))
 
 ####################################################################################################
-def IoU(Y,T,n_classes=2):
-	'''
-	2-class	
-	'''
-	if n_classes == 2:
-		intersection = ((Y==1) & (T==1)).sum()
-		union        = ((Y==1) | (T==1)).sum()
-		return intersection/union
-	if n_classes == 3:
-		pass
-
+# FUNCTIONS
+####################################################################################################
 
 def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 	'''

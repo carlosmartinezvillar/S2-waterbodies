@@ -7,6 +7,7 @@ import time
 from tqdm import tqdm
 import argparse
 import json
+from functools import wraps
 
 import utils
 import model
@@ -15,8 +16,6 @@ import dload
 ####################################################################################################
 # SET GLOBAL VARS FROM ENV ET CETERA ET CETERA
 ####################################################################################################
-# cuda_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") #temp
-
 __spec__ = None # DEBUG with tqdm -- temp.
 
 parser = argparse.ArgumentParser()
@@ -35,6 +34,7 @@ required.add_argument('--row',required=True,type=int,default=0,
 # optional.add_argument('--seed',required=False,action='store_true',
 	# help='Fix the random seed of imported modules for reproducibility.') --> moved to HParams
 optional.add_argument('--gpu',required=False,type=int,default=0)
+optional.add_argument('--multi-gpu',required=False,type=bool,action='store_true',default=False)
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -42,9 +42,20 @@ LOG_DIR   = args.log_dir
 MODEL_DIR = args.net_dir
 CUDA_DEV  = None
 
+def total_time_decorator(orig_func):
+	@wraps(orig_func)
+	def wrapper(*args, **kwargs):
+		total_time_start = time.time()
+		orig_func(*args,**kwargs)
+		total_time = time.time() - total_time_start
+		print(f'TOTAL TRAINING TIME: {total_time:.2f}s')
+
+	return wrapper
+
 ####################################################################################################
 # TRAININING+VALIDATION
 ####################################################################################################
+@total_time_decorator
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
 	N_tr = len(dataloaders['training'].dataset)
@@ -53,8 +64,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	best_epoch = 0
 	epoch_logger = utils.Logger(f'{LOG_DIR}/train_log_{model.model_id:03}.tsv',
 		["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"])
-
-	total_start_time = time.time()
 
 	for epoch in range(n_epochs):
 		M_tr = utils.ConfusionMatrix(n_classes=2)
@@ -66,7 +75,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		############################################################
 		# TRAINING
 		############################################################		
-		t = tqdm(total=len(dataloaders['training']),ncols=80)
+		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
 
 		tr_loss_sum = 0.0
 		samples_ran = 0
@@ -111,7 +120,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		############################################################
 		# VALIDATION
 		############################################################
-		t = tqdm(total=len(dataloaders['validation']),ncols=80)
+		t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
 
 		va_loss_sum = 0.0
 		samples_ran = 0
@@ -156,12 +165,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
 		print(f'Best validation IoU: {best_iou:.4f}')
-		total_time = time.time() - total_start_time
-		print(f'Total time: {total_time:.2f}s')
 
 
 if __name__ == "__main__":
-
 	#---------- LOAD AND PARSE HP DICT ----------
 	#some checks
 	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
@@ -228,7 +234,7 @@ if __name__ == "__main__":
 		utils.set_seed(476)	
 
 	#---------- DATALOADERS ----------
-	tr_idx,va_idx,te_idx = dload.get_split_indices()
+	tr_idx,va_idx,te_idx = dload.sentinel_split_indices()
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
 	va_dataset = torch.utils.data.Subset(dataset,va_idx)
