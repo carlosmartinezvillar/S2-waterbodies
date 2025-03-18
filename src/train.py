@@ -62,8 +62,10 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	N_va = len(dataloaders['validation'].dataset)
 	best_iou   = 0.0
 	best_epoch = 0
-	epoch_logger = utils.Logger(f'{LOG_DIR}/train_log_{model.model_id:03}.tsv',
-		["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"])
+	epoch_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
+	epoch_logger = utils.Logger(f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv',epoch_header)
+	tr_batch_loss = []
+	va_batch_loss = []
 
 	for epoch in range(n_epochs):
 		M_tr = utils.ConfusionMatrix(n_classes=2)
@@ -97,7 +99,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			optimizer.step()
 
 			# metrics
-			tr_loss_sum = loss.item() * X.size(0)
+			tr_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)			
 			Y = output.detach().cpu().numpy().max(axis=1)
 			T = T.detach().cpu().numpy()
@@ -137,7 +139,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 				_,Y    = torch.max(output,1)
 
 			#metrics 
-			va_loss_sum = loss.item() * X.size(0)
+			va_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
 
@@ -154,8 +156,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		############################################################
 		epoch_time = time.time() - epoch_start_time
 		print(f'\nEpoch time: {epoch_time:.2f}s')
-		epoch_log = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
-		epoch_logger.log(epoch_log)
+		epoch_result = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
+		epoch_logger.log(epoch_result)
 
 		# SAVE MODEL
 		epoch_iou = M_va.iou()
@@ -163,6 +165,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			best_iou = epoch_iou
 			best_epoch = epoch
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
+
+		with open()
 
 		print(f'Best validation IoU: {best_iou:.4f}')
 
@@ -188,6 +192,8 @@ if __name__ == "__main__":
 		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
 	else:
 		CUDA_DEV = torch.device("cpu")
+
+	#---------- MULTI-GPU (IF SET) ---------- <---------- TODO!
 
 
 	#---------- MODEL ----------
@@ -238,7 +244,6 @@ if __name__ == "__main__":
 	dataset              = dload.SentinelDataset(DATA_DIR)
 	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
 	va_dataset = torch.utils.data.Subset(dataset,va_idx)
-
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
 			drop_last=False,shuffle=True,num_workers=2),
