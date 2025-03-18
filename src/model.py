@@ -591,3 +591,16 @@ class UNet6_1(torch.nn.Module):
 
 if __name__ == '__main__':
 	test_net = UNet1_1()
+
+
+################################################################################
+# LOSS FUNCTIONS
+################################################################################
+class EdgeWeightedLoss(torch.nn.Module):
+
+	def __init__(self,beta=0.5):
+		super().__init__()
+
+	def forward(self,output,target,weight):
+		loss = torch.exp(-output)
+		return loss
