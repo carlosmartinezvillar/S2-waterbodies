@@ -34,7 +34,7 @@ required.add_argument('--row',required=True,type=int,default=0,
 # optional.add_argument('--seed',required=False,action='store_true',
 	# help='Fix the random seed of imported modules for reproducibility.') --> moved to HParams
 optional.add_argument('--gpu',required=False,type=int,default=0)
-optional.add_argument('--multi-gpu',required=False,type=bool,action='store_true',default=False)
+optional.add_argument('--multi-gpu',required=False,action='store_true',default=False)
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -84,7 +84,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		model.train()
 
 		for X,T in dataloaders['training']:
-
+			#to device
 			X = X.to(CUDA_DEV,non_blocking=True)
 			T = T.to(CUDA_DEV,non_blocking=True)
 
@@ -98,7 +98,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			loss.backward()
 			optimizer.step()
 
-			# metrics
+			# METRICS
 			tr_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)			
 			Y = output.detach().cpu().numpy().max(axis=1)
@@ -108,13 +108,12 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			# update bar
 			t.set_postfix(loss='{:05.4f}'.format(tr_loss_sum/samples_ran))
 			t.update(1)
-		
 		t.close()
 
 		if scheduler is not None:
 			scheduler.step()
 
-		# log training
+		# LOG TRAINING
 		loss_tr = tr_loss_sum / N_tr
 		print(f'[T] loss: {loss_tr:.5f} | acc: {M_tr.acc():.5f} | iou: {M_tr.iou():.5f}')
 
@@ -129,7 +128,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		model.eval()
 
 		for X,T in dataloaders['validation']:
-
+			#to device
 			X = X.to(CUDA_DEV,non_blocking=True)
 			T = T.to(CUDA_DEV,non_blocking=True)
 
@@ -138,16 +137,16 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 				loss   = loss_fn(output,T)
 				_,Y    = torch.max(output,1)
 
-			#metrics 
+			# METRICS
 			va_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
 
 			t.set_postfix(loss='{:05.4f}'.format(va_loss_sum/samples_ran))
 			t.update(1)
-
 		t.close()
-		# log validation
+
+		# LOG VALIDATION
 		loss_va = va_loss_sum / N_va
 		print(f'[V] loss: {loss_va:.5f} | acc: {M_va.acc():.5f} | iou: {M_va.iou():.5f}')
 
@@ -166,9 +165,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			best_epoch = epoch
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
-		with open()
-
 		print(f'Best validation IoU: {best_iou:.4f}')
+
+		#LOG BATCH LOSSes
+		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv') as batch_fp:
+			batch_fp.writelines([f'{_:.5f}\n' for _ in tr_batch_loss])
+		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv') as batch_fp:
+			batch_fp.writelines([f'{_:.5f}\n' for _ in va_batch_loss])
 
 
 if __name__ == "__main__":
@@ -189,6 +192,7 @@ if __name__ == "__main__":
 	# assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
 	
 	if torch.cuda.is_available():
+		assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
 		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
 	else:
 		CUDA_DEV = torch.device("cpu")
@@ -212,7 +216,7 @@ if __name__ == "__main__":
 		loss_fn = torch.nn.CrossEntropyLoss()
 	if HP['LOSS'] == "ew":
 		loss_fn = None
-	if HP['LOSS'] == "cw":
+	if HP['LOSS'] == "cw": #<<< --- Needs some work...
 		loss_fn = None
 
 
@@ -220,17 +224,15 @@ if __name__ == "__main__":
 	assert HP["OPTIM"] in ["adam","lamb"], "train.py: INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
-	if HP['OPTIM'] == "lamb":
-		optimizer = None
+	if HP['OPTIM'] == "sgd":
+		optimizer = torch.optim.SGD(net.parameters(),lr=HP['LEARNING_RATE'])
 
 
 	#---------- LEARNING RATE SCHEDULER ----------
 	if HP['SCHEDULER'] == "step":
-		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.1)
-	elif HP['SCHEDULER'] == "linear":
-		scheduler = None
+		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.3)
 	elif HP['SCHEDULER'] == "exp":
-		scheduler = None
+		scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.8)
 	else:
 		scheduler = None	
 

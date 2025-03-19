@@ -19,10 +19,9 @@ class LastLayer(nn.Module):
 	def forward(self,x):
 		return self.conv(x)
 
-
 #UNet1_x
 class ConvBlock1(nn.Module):
-	def __init__(self,i_ch,o_ch,block_type):
+	def __init__(self,i_ch,o_ch,block_type='A'):
 		super(ConvBlock1,self).__init__() #-----> switch params to dict and then iterate to set layers :TODO:
 		if block_type == 'A':
 			# HALF-PADDING/STRIDE 1 CONVOLUTION
@@ -31,7 +30,7 @@ class ConvBlock1(nn.Module):
 			# STRIDE 2 CONVOLUTION -- strictly for 1_4
 			self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=2,padding=1,bias=False)
 		else:
-			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
+			raise ValueError("BLOCK TYPE NOT WELL DEFINED IN CONVOLUTION BLOCK 1.")
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
@@ -49,7 +48,7 @@ class ConvBlock1(nn.Module):
 
 class UpBlock1_4(nn.Module):
 	'''
-	Class needed for UNet1_4. The first convolution is a transpose doubling HxW.
+	Class needed for UNet1_4. The first convolution is a ConvTranspose2d doubling HxW.
 	This avoids an additional upscale operation outside the block (mirroring the downblocks in
 	this particular model).
 	'''
@@ -76,27 +75,26 @@ class UpBlock1_4(nn.Module):
 class Bottleneck1(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(Bottleneck1,self).__init__()
-		self.BLOCK = ConvBlock1(i_ch,o_ch,'A')
+		self.block = ConvBlock1(i_ch,o_ch,'A')
 
 	def forward(self,x):
-		return self.BLOCK(x)
-
+		return self.block(x)
 
 #UNet2_x
 class ConvBlock2(nn.Module):
-	def __init__(self,i_ch,o_ch,block_type):
+	def __init__(self,i_ch,o_ch,block_type='A'):
 		super(ConvBlock2,self).__init__()
 
 		if block_type == 'A':
 			# HALF-PADDING/STRIDE 1 CONVOLUTION
-			init_stride = 1
+			stride_1 = 1
 		elif block_type == 'B':
 			# STRIDE 2 CONVOLUTION (HALVE HxW) -- strictly for 1_4
-			init_stride = 2
+			stride_1 = 2
 		else:
-			raise ValueError("BLOCK TYPE NOT DEFINED IN CONVOLUTION BLOCK 1.")
+			raise ValueError("BLOCK TYPE NOT WELL DEFINED IN CONVOLUTION BLOCK 2.")
 
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=init_stride,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=stride_1,padding=1,bias=False)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
@@ -116,10 +114,10 @@ class ConvBlock2(nn.Module):
 class Bottleneck2(nn.Module):
 	def __init__(self,i_ch):
 		super(Bottleneck2,self).__init__()
-		self.BLOCK = ConvBlock2(i_ch,o_ch,'A')
+		self.block = ConvBlock2(i_ch,o_ch,'A')
 
 	def forward(self,x):
-		return self.BLOCK(x)
+		return self.block(x)
 
 class UpBlock2_4(nn.Module):
 	'''
@@ -145,7 +143,6 @@ class UpBlock2_4(nn.Module):
 		x = self.R2(x)
 		return x + res
 
-
 #UNet3_x
 class Bottleneck3(nn.Module):
 	def __init__(self,i_ch):
@@ -164,7 +161,6 @@ class Bottleneck4(nn.Module):
 	def forward(self,x):
 		return self.layers(x)
 
-
 #UNet5_x
 class Bottleneck5(nn.Module):
 	def __init__(self,i_ch):
@@ -173,7 +169,6 @@ class Bottleneck5(nn.Module):
 
 	def forward(self,x):
 		return self.layers(x)
-
 
 # UNet6_x
 class Bottleneck6(nn.Module):
@@ -190,7 +185,7 @@ class Bottleneck6(nn.Module):
 ################################################################################
 #--- 2 LAYERS ---
 class UNet1_1(nn.Module):
-    def __init__(self, model_id, in_channels=3, out_channels=1):
+    def __init__(self, model_id, in_channels=3, out_channels=2):
         super(UNet1_1, self).__init__()
         #IDs
         self.model_name = 'unet1_1'
@@ -224,7 +219,7 @@ class UNet1_1(nn.Module):
         self.decoder_1 = ConvBlock1(64,32,'A')
 
         # LASTLAYER
-        self.out_layer = LastLayer(32,2)
+        self.out_layer = LastLayer(32,out_channels)
 
     def forward(self, x):
         # ENCODER
@@ -254,7 +249,7 @@ class UNet1_1(nn.Module):
 
 
 class UNet1_2(nn.Module):
-	def __init__(self,model_id,in_channels=3,out_channels=1):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet1_2,self).__init__()
 		self.model_name = 'unet1_2'
 		self.model_id   = model_id
@@ -288,7 +283,7 @@ class UNet1_2(nn.Module):
 		self.decoder_1 = ConvBlock1(64,32,'A')
 
 		#LAST-LAYER
-		self.out_layer = LastLayer(32,2)
+		self.out_layer = LastLayer(32,out_channels)
 
 	def forward(self,x):
 		#ENCODER
@@ -313,7 +308,7 @@ class UNet1_2(nn.Module):
 
 
 class UNet1_3(nn.Module):
-	def __init__(self,model_id,in_channels=3,out_channels=1):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet1_3,self).__init__()
 		self.model_name = 'unet1_3'
 		self.model_id = model_id
@@ -322,33 +317,35 @@ class UNet1_3(nn.Module):
 		self.embedding = EmbeddingLayer(in_channels,32)
 
 		#ENCODER
+		# features = [32,64,128,256,512]
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False}
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 		
-		self.encoder_1 = ConvBlock1(32,32,'A')
+		self.encoder_1 = ConvBlock1(32,32)
 		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
-		self.encoder_2 = ConvBlock1(64,64,'A')
+		self.encoder_2 = ConvBlock1(64,64)
 		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
-		self.encoder_3 = ConvBlock1(128,128,'A')
+		self.encoder_3 = ConvBlock1(128,128)
 		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
-		self.encoder_4 = ConvBlock1(256,256,'A')
+		self.encoder_4 = ConvBlock1(256,256)
 		self.down_op_4 = nn.Conv2d(256,512,**down_op_params)
 
 		#BOTTLENECK
 		self.bottleneck = Bottleneck1(512,512)
 
 		#DECODER
+		# features = [512,256,128,64,32]
 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
 		self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.decoder_4 = ConvBlock1(512,512,'A')
+		self.decoder_4 = ConvBlock1(512,512)
 		self.up_op_3   = nn.ConvTranspose2d(512,128,**up_op_params) #it gets weird here: C/4
-		self.decoder_3 = ConvBlock1(256,256,'A')
+		self.decoder_3 = ConvBlock1(256,256)
 		self.up_op_2   = nn.ConvTranspose2d(256,64,**up_op_params)
-		self.decoder_2 = ConvBlock1(128,128,'A')
+		self.decoder_2 = ConvBlock1(128,128)
 		self.up_op_1   = nn.ConvTranspose2d(128,32,**up_op_params)
-		self.decoder_1 = ConvBlock1(64,64,'A')
+		self.decoder_1 = ConvBlock1(64,64)
 
 		#LAST LAYER
-		self.out_layer = LastLayer(64,2)
+		self.out_layer = LastLayer(64,out_channels)
 
 	def forward(self,x):
 		#ENCODER
@@ -373,7 +370,7 @@ class UNet1_3(nn.Module):
 
 
 class UNet1_4(nn.Module):
-	def __init__(self,model_id,in_channels=3,out_channels=1):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet1_4,self).__init__()
 		self.model_name = 'unet1_4'
 		self.model_id = model_id
@@ -397,7 +394,7 @@ class UNet1_4(nn.Module):
 		self.decoder_1 = UpBlock1_4(64,16)
 
 		#LAST LAYERS
-		self.out_layer = LastLayer(16,2)
+		self.out_layer = LastLayer(16,out_channels)
 
 	def forward(self,x):
 		#ENCODER
@@ -422,7 +419,7 @@ class UNet1_4(nn.Module):
 
 #TODO
 class UNet2_1(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,in_channels=3,out_channels=2):
 		super(UNet2_1,self).__init__()
 		#IDs
 		self.model_name = 'unet2_1'
@@ -439,7 +436,7 @@ class UNet2_1(nn.Module):
 		self.down_op_2 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
 		self.encoder_3 = ConvBlock2(64,128,'A')
 		self.down_op_3 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
-		self.encoder_4 = ConvBlock2(128,256)
+		self.encoder_4 = ConvBlock2(128,256,'A')
 		self.down_op_4 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
 
 		# BOTTLENECK
@@ -457,7 +454,7 @@ class UNet2_1(nn.Module):
 		self.decoder_1 = ConvBlock2(64,32,'A')
 
 		# LAST LAYER
-		self.out_layer = LastLayer(32,2)
+		self.out_layer = LastLayer(32,out_channels)
 
 	def forward(self,x):
 		#ENCODER
@@ -486,18 +483,96 @@ class UNet2_1(nn.Module):
 
 #TODO
 class UNet2_2(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,in_channels=3,out_channels=2):
 		super(UNet2_2,self).__init__()
+		self.model_name = 'unet2_2'
+		self.model_id   = model_id
+
+		self.embedding  = EmbeddingLayer(in_channels,16)
+
+		# ENCODER
+		#features = [16,32,64,128,256,512]
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 		
+		self.encoder_1 = ConvBlock2(16,32)
+		self.down_op_1 = nn.Conv2d(32,32,**down_op_params)		
+		self.encoder_2 = ConvBlock2(32,64)
+		self.down_op_2 = nn.Conv2d(64,64,**down_op_params)
+		self.encoder_3 = ConvBlock2(64,128)
+		self.down_op_3 = nn.Conv2d(128,128,**down_op_params)
+		self.encoder_4 = ConvBlock2(128,256)
+		self.down_op_4 = nn.Conv2d(256,256,**down_op_params)
+
+		# BOTTLENECK
+		self.bottleneck = Bottleneck2(256,512)
+
+		# DECODER
+		#features = [512,256,128,64,32]
+		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+		self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
+		self.decoder_4 = ConvBlock2(512,256)
+		self.up_op_3   = nn.ConvTranspose2d(256,128,**up_op_params)
+		self.decoder_3 = ConvBlock2(256,128)
+		self.up_op_2   = nn.ConvTranspose2d(128,64,**up_op_params)
+		self.decoder_2 = ConvBlock2(128,64)
+		self.up_op_1   = nn.ConvTranspose2d(64,32,**up_op_params)
+		self.decoder_1 = ConvBlock2(64,32)
+
+		# LAST LAYER
+		self.out_layer = LastLayer(32,out_channels)
 
 	def forward(self,x):
+		#ENCODER
+		enc_0 = self.embedding(x)
+		enc_1 = self.encoder_1(enc_0)
+		enc_2 = self.encoder_2(self.down_op_1(enc_1))
+		enc_3 = self.encoder_3(self.down_op_2(enc_2))
+		enc_4 = self.encoder_4(self.down_op_3(enc_3))
+
+		#BOTTLENECK
+		enc_5 = self.bottleneck(self.down_op_4(enc_4))
+
+		#DECODER
+		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
+		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
+		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
+		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
+
+		#LAST LAYER
+		output = self.out_layer(dec_1)
 		return output
 
 #TODO
 class UNet2_3(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,in_channels=3,out_channels=2):
 		super(UNet2_3,self).__init__()
+		self.model_name = 'unet2_3'
+		self.model_id   = model_id
+
+		# ENCODER
+		features = [32,64,128,256,512]
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+		self.encoder = nn.ModuleList([
+			ConvBlock2(32,32)
+		])
+
+
+		# BOTTLENECK
+
+		# DECODER
+		# 
+
+		# LAST LAYER
 
 	def forward(self,x):
+		# ENCODER
+
+		# BOTTLENECK
+
+		# DECODER
+
+		# LAST LAYER
+		output = self.out_layer(dec_1)
+
 		return output
 
 #TODO
@@ -605,12 +680,15 @@ class SegFormer_0(nn.Module):
 ################################################################################
 class EdgeWeightedLoss(nn.Module):
 
-	def __init__(self,beta=0.5):
+	def __init__(self,alpha=0.7,beta=0.3):
 		super().__init__()
-		self.beta = beta
+		self.alpha = alpha
+		self.beta  = beta
+		self.sigma = 5
+		self.CE    = nn.CrossEntropyLoss(reduction=None)
 
 	def forward(self,output,target,weight):
-		loss = torch.exp(-output)
+		loss = torch.exp(-weight**2)/self.sigma
 		return loss
 
 
@@ -619,7 +697,27 @@ if __name__ == '__main__':
 	import dload
 	tr_idx,va_idx,_ = dload.sentinel_split_indices()
 	dataset = SentinelDataset('../../Desktop/chips/')
-	va_ds   = 
+	va_ds   = torch.utils.data.Subset(dataset,va_idx)
+	va_dl   = torch.utils.data.DataLoader(va_dl,batch_size=8,drop_last=False,shuffle=False)
 
-	unet1_1 = UNet1_1()
+	test_these = ["Unet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
+	"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4"]
+
+	for _ in test_these: #nevermind unit testing...
+		print('='*60)
+		print("TESTING {_}...")
+		print('='*60)		
+		exec(f"net = model.{_}('999')")
+
+		net.to(CUDA_DEV)
+		X,T = next(va_dl)
+		X.to(CUDA_DEV)
+		T.to(CUDA_DEV)
+
+		print(X.shape)
+		print(T.shape)
+
+		y = net(X)
+
+		print(y.shape)
 
