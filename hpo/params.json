@@ -1,7 +1,7 @@
 [
-{"ID":1,"SEED":1,"LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_1"},
-{"ID":2,"SEED":1,"LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_2"},
-{"ID":3,"SEED":1,"LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_3"},
-{"ID":4,"SEED":1,"LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_4"},
-{"ID":5,"SEED":1,"LEARNING_RATE":0.001,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet2_1"}
+{"ID":1,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_1"},
+{"ID":2,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_2"},
+{"ID":3,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_3"},
+{"ID":4,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet1_4"},
+{"ID":5,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"step","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","MODEL":"unet2_1"}
 ]
