@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-import nn.functional as F
+import torch.nn.functional as F
 
-#ALL
+#=======================
+#INPUT AND OUTPUT LAYERS
+#========================
 class EmbeddingLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(EmbeddingLayer,self).__init__()
@@ -112,7 +114,7 @@ class ConvBlock2(nn.Module):
 		return x + res
 
 class Bottleneck2(nn.Module):
-	def __init__(self,i_ch):
+	def __init__(self,i_ch,o_ch):
 		super(Bottleneck2,self).__init__()
 		self.block = ConvBlock2(i_ch,o_ch,'A')
 
@@ -202,7 +204,7 @@ class UNet1_1(nn.Module):
         self.encoder_3 = ConvBlock1(64,128,'A')
         self.down_op_3 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         self.encoder_4 = ConvBlock1(128,256,'A')
-        self.down_op_4 = nn.MaxPo ol2d(kernel_size=2,stride=2,padding=0)        
+        self.down_op_4 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         
         # BOTTLENECK
         # self.bottleneck = ConvBlock1(256,512,'A')
@@ -542,43 +544,112 @@ class UNet2_2(nn.Module):
 		return output
 
 #TODO
-class UNet2_3(nn.Module):
-	def __init__(self,in_channels=3,out_channels=2):
+# class UNet2_3(nn.Module):
+# 	def __init__(self,model_id,in_channels=3,out_channels=2):
+# 		super(UNet2_3,self).__init__()
+# 		self.model_name = 'unet2_3'
+# 		self.model_id   = model_id
+
+# 		# ENCODER
+# 		# features = [32,64,128,256,512]
+# 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+# 		self.encoder = nn.ModuleList([
+# 			ConvBlock2(32,32),
+# 			nn.Conv2d(32,64,**down_op_params),
+# 			ConvBlock2(64,64),
+# 			nn.Conv2d(64,128,**down_op_params),
+# 			ConvBlock2(128,128),
+# 			nn.Conv2d(128,256,**down_op_params),
+# 			ConvBlock2(256,256),
+# 			nn.Conv2d(256,512,**down_op_params)
+# 		])
+
+# 		# BOTTLENECK
+# 		self.bottleneck = Bottleneck2(512,512)
+
+# 		# DECODER
+# 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+# 		self.decoder = nn.ModuleList([
+# 				nn.ConvTranspose2d(512,256,**up_op_params),
+# 				ConvBlock2(512,256),
+# 				nn.ConvTranspose2d(256,128,**up_op_params),
+# 				ConvBlock2(256,128),
+# 				nn.ConvTranspose2d(128,64,**up_op_params),
+# 				ConvBlock2(128,64),
+# 				nn.ConvTranspose2d(64,32,**up_op_params),
+# 				ConvBlock2(64,32)
+# 			])
+
+# 		# LAST LAYER
+# 		self.out_layer = LastLayer(32,out_channels)
+
+# 	def forward(self,x):
+# 		# ENCODER
+# 		x = self.embedding(x)
+# 		skip_connections = []
+# 		for i in range(0,len(self.encoder),2):
+# 			x = self.encoder[i](x) #block
+# 			skip_connections.append(x)
+# 			x = self.encoder[i+1](x) #down
+
+# 		# BOTTLENECK
+# 		x = self.bottleneck(x)
+# 		skips = skips[::-1]
+
+# 		# DECODER
+# 		for i in range(0,len(self.decoder),2):
+# 			x = self.decoder[i](x) #upconv
+# 			x = self.decoder[i+1](torch.cat([skips[i//2],x],dim=1)) #block
+
+# 		# LAST LAYER
+# 		output = self.out_layer(x)
+# 		return output
+
+class UNet2_3(nn.Module): #TODO <------ error on nr of channels in diagram, channels need to be 1/4 afer up
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet2_3,self).__init__()
 		self.model_name = 'unet2_3'
 		self.model_id   = model_id
 
-		# ENCODER
-		features = [32,64,128,256,512]
-		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder = nn.ModuleList([
-			ConvBlock2(32,32)
-		])
+		#FIRST LAYER
 
+		#ENCODER
 
-		# BOTTLENECK
+		#BOTTLENECK
 
-		# DECODER
-		# 
+		#DECODER
+		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
 
-		# LAST LAYER
+		#LAST LAYER
+		self.out_layer = LastLayer()
 
 	def forward(self,x):
-		# ENCODER
+		#ENCODER
 
-		# BOTTLENECK
+		#BOTTLENECK
 
-		# DECODER
+		#DECODER
 
-		# LAST LAYER
+		#LAST LAYER
 		output = self.out_layer(dec_1)
-
-		return output
+		return output		
 
 #TODO
 class UNet2_4(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
+	def __init__(self,in_channels=3,out_channels=2):
 		super(UNet2_4,self).__init__()
+		self.model_name = 'unet2_4'
+		self.model_id   = model_id
+
+		#ENCODER
+		self.
+
+		#BOTTLENECK
+
+		#DECODER
+
+		#LAST LAYER
+
 
 	def forward(self,x):
 		return output
@@ -669,11 +740,14 @@ class UNet6_1(nn.Module):
 # TRANSFORMERS
 ################################################################################
 class SegFormer_0(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1)
-	super(SegFormer,self).__init__()
-	self.model_name = 'segformer_0'
-	self.model._id  = model_id
+	def __init__(self,in_channels=3,out_channels=2):
+		super(SegFormer_0,self).__init__()
+		self.model_name = 'segformer_0'
+		self.model._id  = model_id
 
+
+	def forward(self,x):
+		return x
 
 ################################################################################
 # LOSS FUNCTIONS
