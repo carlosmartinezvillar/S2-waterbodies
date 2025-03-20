@@ -543,67 +543,7 @@ class UNet2_2(nn.Module):
 		output = self.out_layer(dec_1)
 		return output
 
-#TODO
-# class UNet2_3(nn.Module):
-# 	def __init__(self,model_id,in_channels=3,out_channels=2):
-# 		super(UNet2_3,self).__init__()
-# 		self.model_name = 'unet2_3'
-# 		self.model_id   = model_id
 
-# 		# ENCODER
-# 		# features = [32,64,128,256,512]
-# 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-# 		self.encoder = nn.ModuleList([
-# 			ConvBlock2(32,32),
-# 			nn.Conv2d(32,64,**down_op_params),
-# 			ConvBlock2(64,64),
-# 			nn.Conv2d(64,128,**down_op_params),
-# 			ConvBlock2(128,128),
-# 			nn.Conv2d(128,256,**down_op_params),
-# 			ConvBlock2(256,256),
-# 			nn.Conv2d(256,512,**down_op_params)
-# 		])
-
-# 		# BOTTLENECK
-# 		self.bottleneck = Bottleneck2(512,512)
-
-# 		# DECODER
-# 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
-# 		self.decoder = nn.ModuleList([
-# 				nn.ConvTranspose2d(512,256,**up_op_params),
-# 				ConvBlock2(512,256),
-# 				nn.ConvTranspose2d(256,128,**up_op_params),
-# 				ConvBlock2(256,128),
-# 				nn.ConvTranspose2d(128,64,**up_op_params),
-# 				ConvBlock2(128,64),
-# 				nn.ConvTranspose2d(64,32,**up_op_params),
-# 				ConvBlock2(64,32)
-# 			])
-
-# 		# LAST LAYER
-# 		self.out_layer = LastLayer(32,out_channels)
-
-# 	def forward(self,x):
-# 		# ENCODER
-# 		x = self.embedding(x)
-# 		skip_connections = []
-# 		for i in range(0,len(self.encoder),2):
-# 			x = self.encoder[i](x) #block
-# 			skip_connections.append(x)
-# 			x = self.encoder[i+1](x) #down
-
-# 		# BOTTLENECK
-# 		x = self.bottleneck(x)
-# 		skips = skips[::-1]
-
-# 		# DECODER
-# 		for i in range(0,len(self.decoder),2):
-# 			x = self.decoder[i](x) #upconv
-# 			x = self.decoder[i+1](torch.cat([skips[i//2],x],dim=1)) #block
-
-# 		# LAST LAYER
-# 		output = self.out_layer(x)
-# 		return output
 
 class UNet2_3(nn.Module): #TODO <------ error on nr of channels in diagram, channels need to be 1/4 afer up
 	def __init__(self,model_id,in_channels=3,out_channels=2):
@@ -612,23 +552,52 @@ class UNet2_3(nn.Module): #TODO <------ error on nr of channels in diagram, chan
 		self.model_id   = model_id
 
 		#FIRST LAYER
+		self.embedding = EmbeddingLayer(in_channels,32)
 
 		#ENCODER
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+		self.encoder_1 = ConvBlock2(32,32)
+		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
+		self.encoder_2 = ConvBlock2(64,64)
+		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
+		self.encoder_3 = ConvBlock2(128,128)
+		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
+		self.encoder_4 = ConvBlock2(256,256)
+		self.down_op_4 = nn.Conv2d(256,512)
 
 		#BOTTLENECK
+		self.bottleneck = Bottleneck2(512,512)
 
 		#DECODER
 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+		self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
+		self.decoder_4 = ConvBlock2(512,512)
+		self.up_op_3   = nn.ConvTranspose2d(512,128,**up_op_params)
+		self.decoder_3 = ConvBlock2(256,256)
+		self.up_op_2   = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.decoder_2 = ConvBlock2(128,128)
+		self.up_op_1   = nn.ConvTranspose2d(128,32,**up_op_params)
+		self.decoder_1 = ConvBlock2(64,64)
 
 		#LAST LAYER
-		self.out_layer = LastLayer()
+		self.out_layer = LastLayer(64,out_channels)
 
 	def forward(self,x):
 		#ENCODER
+		enc_0 = self.embedding(x)
+		enc_1 = self.encoder_1(enc_0)
+		enc_2 = self.encoder_2(self.down_op_1(enc_1))
+		enc_3 = self.encoder_3(self.down_op_2(enc_2))
+		enc_4 = self.encoder_4(self.down_op_3(enc_3))
 
 		#BOTTLENECK
+		enc_5 = self.bottleneck(self.down_op_4(enc_4))
 
 		#DECODER
+		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
+		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
+		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
+		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
 
 		#LAST LAYER
 		output = self.out_layer(dec_1)
@@ -795,3 +764,65 @@ if __name__ == '__main__':
 
 		print(y.shape)
 
+
+#FOR-LOOP IS MESSIER ON FINAL LAYOUT
+# class UNet2_3(nn.Module):
+# 	def __init__(self,model_id,in_channels=3,out_channels=2):
+# 		super(UNet2_3,self).__init__()
+# 		self.model_name = 'unet2_3'
+# 		self.model_id   = model_id
+
+# 		# ENCODER
+# 		# features = [32,64,128,256,512]
+# 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+# 		self.encoder = nn.ModuleList([
+# 			ConvBlock2(32,32),
+# 			nn.Conv2d(32,64,**down_op_params),
+# 			ConvBlock2(64,64),
+# 			nn.Conv2d(64,128,**down_op_params),
+# 			ConvBlock2(128,128),
+# 			nn.Conv2d(128,256,**down_op_params),
+# 			ConvBlock2(256,256),
+# 			nn.Conv2d(256,512,**down_op_params)
+# 		])
+
+# 		# BOTTLENECK
+# 		self.bottleneck = Bottleneck2(512,512)
+
+# 		# DECODER
+# 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+# 		self.decoder = nn.ModuleList([
+# 				nn.ConvTranspose2d(512,256,**up_op_params),
+# 				ConvBlock2(512,256),
+# 				nn.ConvTranspose2d(256,128,**up_op_params),
+# 				ConvBlock2(256,128),
+# 				nn.ConvTranspose2d(128,64,**up_op_params),
+# 				ConvBlock2(128,64),
+# 				nn.ConvTranspose2d(64,32,**up_op_params),
+# 				ConvBlock2(64,32)
+# 			])
+
+# 		# LAST LAYER
+# 		self.out_layer = LastLayer(32,out_channels)
+
+# 	def forward(self,x):
+# 		# ENCODER
+# 		x = self.embedding(x)
+# 		skip_connections = []
+# 		for i in range(0,len(self.encoder),2):
+# 			x = self.encoder[i](x) #block
+# 			skip_connections.append(x)
+# 			x = self.encoder[i+1](x) #down
+
+# 		# BOTTLENECK
+# 		x = self.bottleneck(x)
+# 		skips = skips[::-1]
+
+# 		# DECODER
+# 		for i in range(0,len(self.decoder),2):
+# 			x = self.decoder[i](x) #upconv
+# 			x = self.decoder[i+1](torch.cat([skips[i//2],x],dim=1)) #block
+
+# 		# LAST LAYER
+# 		output = self.out_layer(x)
+# 		return output
