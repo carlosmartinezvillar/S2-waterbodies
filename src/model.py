@@ -146,13 +146,32 @@ class UpBlock2_4(nn.Module):
 		return x + res
 
 #UNet3_x
-class Bottleneck3(nn.Module):
-	def __init__(self,i_ch):
-		super(Bottleneck3,self).__init__()
-		pass
+class ConvBlock3(nn.Module):
+	def __init__(self,i_ch,o_ch):
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B1 = nn.BatchNorm2d(o_ch)
+		self.R1 = nn.ReLU(inplace=True)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.B2 = nn.BatchNorm2d(o_ch)
+		self.R2 = nn.ReLU(inplace=True)
 
 	def forward(self,x):
-		return self.layers(x)
+		res = x.clone()
+		x = self.C1(x)
+		x = self.B1(x)
+		x = self.R1(x)
+		x = self.C2(x)
+		x = self.B2(x)
+		x = self.R2(x)				
+		return x + res
+
+class Bottleneck3(nn.Module):
+	def __init__(self,i_ch,o_ch):
+		super(Bottleneck3,self).__init__()
+		self.block = ConvBlock3(i_ch,o_ch)
+
+	def forward(self,x):
+		return self.block(x)
 
 #UNet4_x
 class Bottleneck4(nn.Module):
@@ -225,29 +244,22 @@ class UNet1_1(nn.Module):
 
     def forward(self, x):
         # ENCODER
-        out_0  = self.embedding(x)
-        out_1 = self.encoder_1(out_0)
-        out_2 = self.encoder_2(self.down_op_1(out_1))
-        out_3 = self.encoder_3(self.down_op_2(out_2))
-        out_4 = self.encoder_4(self.down_op_3(out_3))
+        enc_0  = self.embedding(x)
+        enc_1 = self.encoder_1(enc_0)
+        enc_2 = self.encoder_2(self.down_op_1(enc_1))
+        enc_3 = self.encoder_3(self.down_op_2(enc_2))
+        enc_4 = self.encoder_4(self.down_op_3(enc_3))
         
         # BOTTLENECK
-        out_5 = self.bottleneck(self.down_op_4(out_4))
+        enc_5 = self.bottleneck(self.down_op_4(enc_4))
         
         # DECODER
-        inp_4 = self.up_op_4(out_5)
-        out_6 = self.decoder_4(torch.cat([out_4,inp_4],dim=1))
-        inp_3 = self.up_op_3(out_6)
-        out_7 = self.decoder_3(torch.cat([out_3,inp_3],dim=1))
-        inp_2 = self.up_op_2(out_7)
-        out_8 = self.decoder_2(torch.cat([out_2,inp_2],dim=1))
-        inp_1 = self.up_op_1(out_8)
-       	out_9 = self.decoder_1(torch.cat([out_1,inp_1],dim=1)) 
-
-        # FINAL LAYER
-        output = self.out_layer(out_9)
-        
-        return output
+        dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
+        dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
+        dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
+       	dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
+        dec_0 = self.out_layer(dec_1)
+        return dec_0
 
 
 class UNet1_2(nn.Module):
@@ -421,7 +433,7 @@ class UNet1_4(nn.Module):
 
 #TODO
 class UNet2_1(nn.Module):
-	def __init__(self,in_channels=3,out_channels=2):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet2_1,self).__init__()
 		#IDs
 		self.model_name = 'unet2_1'
@@ -485,7 +497,7 @@ class UNet2_1(nn.Module):
 
 #TODO
 class UNet2_2(nn.Module):
-	def __init__(self,in_channels=3,out_channels=2):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet2_2,self).__init__()
 		self.model_name = 'unet2_2'
 		self.model_id   = model_id
@@ -544,8 +556,7 @@ class UNet2_2(nn.Module):
 		return output
 
 
-
-class UNet2_3(nn.Module): #TODO <------ error on nr of channels in diagram, channels need to be 1/4 afer up
+class UNet2_3(nn.Module):
 	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet2_3,self).__init__()
 		self.model_name = 'unet2_3'
@@ -598,37 +609,89 @@ class UNet2_3(nn.Module): #TODO <------ error on nr of channels in diagram, chan
 		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
 		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
 		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
-
-		#LAST LAYER
-		output = self.out_layer(dec_1)
-		return output		
+		dec_0 = self.out_layer(dec_1)
+		return dec_0
 
 #TODO
 class UNet2_4(nn.Module):
-	def __init__(self,in_channels=3,out_channels=2):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super(UNet2_4,self).__init__()
 		self.model_name = 'unet2_4'
 		self.model_id   = model_id
 
+		#FIRST LAYER
+		self.embedding = EmbeddingLayer(in_channels,16)
+
 		#ENCODER
-		self.
+		self.encoder_1 = ConvBlock2(16,32,'B')
+		self.encoder_2 = ConvBlock2(32,64,'B')
+		self.encoder_3 = ConvBlock2(64,128,'B')
+		self.encoder_4 = ConvBlock2(128,256,'B')
 
 		#BOTTLENECK
+		self.bottleneck = Bottleneck2(256,256)
 
 		#DECODER
+		self.decoder_4 = UpBlock2_4(512,128)
+		self.decoder_3 = UpBlock2_4(256,64)
+		self.decoder_2 = UpBlock2_4(128,32)
+		self.decoder_1 = UpBlock2_4(64,16)
+
+		#LAST LAYERS
+		self.out_layer = LastLayer(16,out_channels)
+
+	def forward(self,x):
+		#ENCODER
+		enc_0 = self.embedding(x)
+		enc_1 = self.encoder_1(enc_0)
+		enc_2 = self.encoder_2(enc_1)
+		enc_3 = self.encoder_3(enc_2)
+		enc_4 = self.encoder_4(enc_3)
+
+		#BOTTLENECK
+		enc_5 = self.bottleneck(enc_4)
+
+		#DECODER
+		dec_4 = self.decoder_4(torch.cat([enc_4,enc_5],dim=1))
+		dec_3 = self.decoder_3(torch.cat([enc_3,dec_4],dim=1))
+		dec_2 = self.decoder_2(torch.cat([enc_2,dec_3],dim=1))
+		dec_1 = self.decoder_1(torch.cat([enc_1,dec_2],dim=1))
+
+		#LAST LAYER
+		output = self.out_layer(dec_1)
+		return output
+
+#TODO
+class UNet3_1(nn.Module):
+	def __init__(self,model_id,in_channels=3,out_channels=2):
+		super(UNet3_1,self).__init__()
+		self.model_name = 'unet2_4'
+		self.model_id   = model_id
+
+		#FIRST LAYER
+		self.embedding = EmbeddingLayer(in_channels,32)
+
+		#ENCODER
+
+
+		#DECODER
+
 
 		#LAST LAYER
 
 
 	def forward(self,x):
-		return output
 
-#TODO
-class UNet3_1(nn.Module):
-	def __init__(self,in_channels=3,out_channels=1):
-		super(UNet3_1,self).__init__()
+		#FIRST LAYER
 
-	def forward(self,x):
+		#ENCODER
+
+		#DECODER
+
+		#LAST LAYER
+		
+
+		
 		return output
 
 #--- 3 LAYERS ---
