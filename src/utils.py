@@ -204,51 +204,53 @@ def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	return HP
 
 
-def sequence_hyperparameters(id_start,out_path):
+def sequence_hyperparameters(file_path):
 	'''
 	Create a list of dict elements each containing a model's hyperparameters.
 	The list is stored in out_path in .json format and created using the 
 	'cross-product' (all-by-all) of the parameters provided.
 	'''
-	HP = []
+	assert os.path.isfile(file_path), "INCORRECT JSON FILE PATH"
+	with open(file_path,'r') as fp:
+		HP_PREV = json.load(fp)
+
 
 	# Each parameter
+	seed  = [1]
 	lrate = [0.1,0.01,0.001,0.0001]	
-
-	sched = ["step","linear","exp"]
-
-	optim = ["adam","lamb"]
-
+	sched = ["step","exp"]
+	optim = ["adam"]
 	loss  = ["ce"]
 	# loss  = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
-
-	batch = [16]
-	# batch = [16,32,64]
-
+	batch = [16,32,64]
 	init  = ["random"]
-	# init  = ["resnet","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
-
+	# init  = ["potsdam","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
+	bands = ["rgb","vnir"]
 	model = ["unet1_1"]
 	# model   = ["unet1_1","unet1_2","unet1_3","unet1_4","unet2_1","unet2_2","unet2_3","unet2_4",
 	# 	"unet3_1","unet4_1","unet4_2","unet4_3","unet4_4","unet5_1","unet5_2","unet5_3",
 	# 	"unet5_4","unet6_1"]
 
 
+
 	# Cross-product
-	hp0 = list(itertools.product(lrate,sched,optim,loss,batch,init,model))
+	hp = list(itertools.product(seed,lrate,sched,optim,loss,batch,init,bands,model))
+	HP_NEW = []
 
 	for i in range(len(hp0)):
 		row_dict = {}
 		row_dict['ID'] = i+id_start
-		row_dict['LEARNING_RATE'] = hp0[i][0]
-		row_dict['SCHEDULER'] = hp0[i][1]
-		row_dict['OPTIM']  = hp0[i][2]
-		row_dict['LOSS']   = hp0[i][3]
-		row_dict['BATCH']  = hp0[i][4]
-		row_dict['INIT']   = hp0[i][5]
-		row_dict['MODEL']  = hp0[i][6]
+		row_dict['SEED']          = hp[i][0]
+		row_dict['LEARNING_RATE'] = hp[i][1]
+		row_dict['SCHEDULER']     = hp[i][2]
+		row_dict['OPTIM']         = hp[i][3]
+		row_dict['LOSS']          = hp[i][4]
+		row_dict['BATCH']         = hp[i][5]
+		row_dict['INIT']          = hp[i][6]
+		row_dict['BANDS']         = hp[i][7]
+		row_dict['MODEL']         = hp[i][8]
 		
-		HP.append(d)
+		HP_NEW.append(d)
 
 	return HP
 

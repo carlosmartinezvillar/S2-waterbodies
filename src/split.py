@@ -40,13 +40,14 @@ def build_tree(chip_names):
 	'''
 	tree = {}
 
+	# Iterate thru chips
 	for chip in chip_names:
 		#Get strings
 		raster = chip[0:-11]
 		tile   = chip[-16:-11]
 		zone   = chip[-16:-13]
 
-		#Iterate and append
+		# Append to tree
 		if zone in tree:
 			if tile in tree[zone]:
 				if raster in tree[zone][tile]:
@@ -131,6 +132,7 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 			shutil.copy(f"{args.data_dir}/{file}",f"{new_dir}/training/{file}",follow_symlinks=False)
 
 	################################################################################
+	# OLD VERSION
 		################################################################################
 			################################################################################
 	# all_rasters = np.array([i[0:-11] for i in chips])   #19456 x 42

@@ -31,8 +31,6 @@ required.add_argument('--params',required=True,default='../hpo/parameters.json',
 	help='Path to file listing hyperparameters.')
 required.add_argument('--row',required=True,type=int,default=0,
 	help='Row number in the given file for hyperparameters.')
-# optional.add_argument('--seed',required=False,action='store_true',
-	# help='Fix the random seed of imported modules for reproducibility.') --> moved to HParams
 optional.add_argument('--gpu',required=False,type=int,default=0)
 optional.add_argument('--multi-gpu',required=False,action='store_true',default=False)
 args = parser.parse_args()
@@ -177,12 +175,12 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 if __name__ == "__main__":
 
 	#---------- GPU (IF SET) ----------
-	# assert torch.cuda.is_available(), "train.py: torch.cuda.is_available() returned False"
-	# assert torch.cuda.device_count() > 0, "train.py: number of CUDA devices is zero."
-	# assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
+	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
+	# assert torch.cuda.device_count() > 0, "number of CUDA devices is zero."
+	# assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
 	
 	if torch.cuda.is_available():
-		assert args.gpu < torch.cuda.device_count(), "train.py: GPU INDEX OUT OF RANGE."
+		assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
 		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
 	else:
 		CUDA_DEV = torch.device("cpu")
@@ -192,18 +190,18 @@ if __name__ == "__main__":
 
 	#---------- LOAD AND PARSE HP DICT ----------
 	#some checks
-	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
+	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
 		HP_LIST = json.load(fp)
-	assert len(HP_LIST) > 0, "train.py: GOT EMPTY JSON FILE."
-	assert 0 <= args.row < len(HP_LIST), "train.py: OUT OF RANGE ROW ARGUMENT." #0-indexed
+	assert len(HP_LIST) > 0, "GOT EMPTY JSON FILE."
+	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
 
 	#load dictionary
 	HP = HP_LIST[args.row]
 
 	#---------- MODEL ----------
 	model_str = HP['MODEL'][0:4]
-	assert model_str in ["attn","unet"], "train.py: INCORRECT MODEL STRING."
+	assert model_str in ["attn","unet"], "INCORRECT MODEL STRING."
 	if model_str == 'unet':
 		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
 	if model_str == 'attn':
@@ -212,7 +210,7 @@ if __name__ == "__main__":
 	net = net.to(CUDA_DEV) #checked above
 
 	#---------- LOSS ----------
-	assert HP['LOSS'] in ["ce","ew","cw"], "train.py: INCORRECT STRING FOR LOSS IN DICT."
+	assert HP['LOSS'] in ["ce","ew","cw"], "INCORRECT STRING FOR LOSS IN DICT."
 	if HP['LOSS'] == "ce":
 		loss_fn = torch.nn.CrossEntropyLoss()
 	if HP['LOSS'] == "ew":
@@ -221,7 +219,7 @@ if __name__ == "__main__":
 		loss_fn = None
 
 	#---------- OPTIMIZER ----------
-	assert HP["OPTIM"] in ["adam","lamb"], "train.py: INCORRECT STRING FOR OPTIMIZER IN DICT."
+	assert HP["OPTIM"] in ["adam","lamb"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == "sgd":
@@ -236,24 +234,42 @@ if __name__ == "__main__":
 		scheduler = None	
 
 	#---------- SET ALL SEEDS ----------
-	assert HP['SEED'] in (0,1), "train.py: INCORRECT SEED IN JSON PARAMETER DICT."
+	assert HP['SEED'] in (0,1), "INCORRECT SEED IN JSON PARAMETER DICT."
 	if HP['SEED'] == True:
 		utils.set_seed(476)	
 
-
 	#---------- INPUT BANDS ----------
-	assert HP['']
+	assert HP['BANDS'] in ['rgb','vnir'],"INCORRECT BANDS IN JSON HP FILE."
+	if HP['BANDS'] == 'rgb':
+		input_bands = 3
+	if HP['BANDS'] == 'vnir':
+		input_bands = 4
 
 	#---------- DATALOADERS ----------
-	tr_idx,va_idx,te_idx = dload.sentinel_split_indices()
-	dataset              = dload.SentinelDataset(DATA_DIR)
-	tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
-	va_dataset = torch.utils.data.Subset(dataset,va_idx)
+	# tr_idx,va_idx,te_idx = dload.sentinel_split_indices()
+	# dataset              = dload.SentinelDataset(DATA_DIR)
+	# tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
+	# va_dataset = torch.utils.data.Subset(dataset,va_idx)
+
+	transform = v2.Compose([
+		v2.RandomHorizontalFlip(p=0.5),
+		v2.RandomVerticalFlip(p=0.5)
+	])
+
+	tr_ds = dload.SentinelDataset(f"{DATA_DIR}/training",
+		n_bands=input_bands,
+		n_labels=2,
+		transform=transform)
+	va_ds = dload.SentinelDataset(f"{DATA_DIR}/validation",
+		n_bands=input_bands,
+		n_labels=2,
+		transform=None)
+
 	dataloaders = {
-		'training': torch.utils.data.DataLoader(tr_dataset,batch_size=HP['BATCH'],
-			drop_last=False,shuffle=True,num_workers=2),
-		'validation': torch.utils.data.DataLoader(va_dataset,batch_size=HP['BATCH'],
-			drop_last=False,shuffle=False,num_workers=2)
+		'training': torch.utils.data.DataLoader(tr_dataset,
+			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=3),
+		'validation': torch.utils.data.DataLoader(va_dataset,
+			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=3)
 	}
 
 	#---------- RUN ----------
