@@ -672,7 +672,8 @@ class UNet3_1(nn.Module):
 		self.embedding = EmbeddingLayer(in_channels,32)
 
 		#ENCODER
-
+		self.encoder_1 = 
+		
 
 		#DECODER
 

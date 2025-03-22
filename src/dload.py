@@ -14,29 +14,44 @@ import glob
 # CLASSES
 ################################################################################
 class SentinelDataset(torch.utils.data.Dataset):
-	def __init__(self,chip_dir,n_bands=3):
+	def __init__(self,chip_dir,n_bands=3,n_labels=2):
 		self.dir        = chip_dir
-		self.rgbn_files = sorted(glob.glob("*_B0X.tif",root_dir=self.dir))
-		self.ids        = [i[0:-8] for i in self.rgbn_files]
-		self.n_bands    = n_bands
-		if (self.n_bands!=3) and (self.n_bands!=4):
+		self.vnir_files = sorted(glob.glob("*_B0X.tif",root_dir=self.dir))
+		self.ids        = [i[0:-8] for i in self.vnir_files]
+
+		if (n_bands!=3) and (n_bands!=4):
 			raise ValueError("Incorrect number of bands in dataloader.")
+
+		if n_bands == 3:
+			self.input_func = self.rgb_get
+		if n_bands == 4:
+			self.input_func = self.vnir_get
 
 		self.transform = v2.Compose([
 			v2.ToImage(),
-			v2.ToDtype(torch.float32, scale=True)])
+			# v2.ToDtype(torch.float32, scale=True)
+			v2.RandomHorizontalFlip(p=0.5),
+			v2.RandomVerticalFlip(p=0.5)
+		])
 
+	def rgb_get(self,idx):
+		r,g,b,_ = Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif').split()
+		return Image.merge(mode='RGB',bands=[r,g,b])
+
+	def vnir_get(self,idx):
+		return Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif')
+		
 	def __len__(self):
 		return len(self.ids)
 
 	def __getitem__(self,idx):
-		if self.n_bands == 4:
-			img = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif'))
-		else:
-			r,g,b,_ = Image.open(f'{self.dir}/{self.ids[idx]}_B0X.tif').split()
-			img = torch.cat(self.transform([r,g,b]),axis=0)
-			
-		lbl = self.transform(Image.open(f'{self.dir}/{self.ids[idx]}_LBL.tif')).squeeze(0).to(torch.long)
+		img = self.input_func(idx)
+		lbl = Image.open(f'{self.dir}/{self.ids[idx]}_LBL.tif')
+
+		img,lbl = self.transform(img,lbl)
+
+		img = img.to(torch.float32).div(255)
+		lbl = lbl.squeeze(0).div(255,rounding_mode='floor').to(torch.int64)
 		return img,lbl
 
 
@@ -111,3 +126,6 @@ def preprocess_isaid():
 if __name__ == '__main__':
 	print('-> dload.py')
 	### TEST DATALOADERS --- TODO
+	ds = SentinelDataset('../../chips_sorted/validation')
+	print(ds[0])
+	pass

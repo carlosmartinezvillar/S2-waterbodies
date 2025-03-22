@@ -175,16 +175,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 
 if __name__ == "__main__":
-	#---------- LOAD AND PARSE HP DICT ----------
-	#some checks
-	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
-	with open(args.params,'r') as fp:
-		HP_LIST = json.load(fp)
-	assert len(HP_LIST) > 0, "train.py: GOT EMPTY JSON FILE."
-	assert 0 <= args.row < len(HP_LIST), "train.py: OUT OF RANGE ROW ARGUMENT." #0-indexed
-
-	#load dictionary
-	HP = HP_LIST[args.row]
 
 	#---------- GPU (IF SET) ----------
 	# assert torch.cuda.is_available(), "train.py: torch.cuda.is_available() returned False"
@@ -199,6 +189,17 @@ if __name__ == "__main__":
 
 	#---------- MULTI-GPU (IF SET) ---------- <---------- TODO!
 
+
+	#---------- LOAD AND PARSE HP DICT ----------
+	#some checks
+	assert os.path.isfile(args.params), "train.py: INCORRECT JSON FILE PATH"
+	with open(args.params,'r') as fp:
+		HP_LIST = json.load(fp)
+	assert len(HP_LIST) > 0, "train.py: GOT EMPTY JSON FILE."
+	assert 0 <= args.row < len(HP_LIST), "train.py: OUT OF RANGE ROW ARGUMENT." #0-indexed
+
+	#load dictionary
+	HP = HP_LIST[args.row]
 
 	#---------- MODEL ----------
 	model_str = HP['MODEL'][0:4]
@@ -219,14 +220,12 @@ if __name__ == "__main__":
 	if HP['LOSS'] == "cw": #<<< --- Needs some work...
 		loss_fn = None
 
-
 	#---------- OPTIMIZER ----------
 	assert HP["OPTIM"] in ["adam","lamb"], "train.py: INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == "sgd":
 		optimizer = torch.optim.SGD(net.parameters(),lr=HP['LEARNING_RATE'])
-
 
 	#---------- LEARNING RATE SCHEDULER ----------
 	if HP['SCHEDULER'] == "step":
@@ -240,6 +239,10 @@ if __name__ == "__main__":
 	assert HP['SEED'] in (0,1), "train.py: INCORRECT SEED IN JSON PARAMETER DICT."
 	if HP['SEED'] == True:
 		utils.set_seed(476)	
+
+
+	#---------- INPUT BANDS ----------
+	assert HP['']
 
 	#---------- DATALOADERS ----------
 	tr_idx,va_idx,te_idx = dload.sentinel_split_indices()
