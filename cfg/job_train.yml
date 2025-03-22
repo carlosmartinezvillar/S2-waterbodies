@@ -43,12 +43,12 @@ spec:
           command: ["/bin/sh","-c"]
           args:
           - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
-            cp chips_zipped_pvc/chips.zip cache/;
-            unzip -q cache/chips.zip -d cache/;
+            cp chips_zipped_pvc/chips_sorted.zip cache/;
+            unzip -q cache/chips_sorted.zip -d cache/;
             mkdir /cache/model;
             mkdir /cache/logs;
             cd S2-waterbodies/src;
-            python3 train.py --data-dir /cache/chips --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
+            python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
             cp /cache/logs/*.tsv /log_pvc;
 
@@ -60,7 +60,7 @@ spec:
 
       - name: zipped-vol
         persistentVolumeClaim:
-          claimName: lake-chips-zipped
+          claimName: lake-chips-zipped-sorted
 
       - name: log-vol
         persistentVolumeClaim:
