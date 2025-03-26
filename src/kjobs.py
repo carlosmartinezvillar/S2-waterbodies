@@ -3,14 +3,15 @@ import subprocess
 import argparse
 import os
 import json
+import sys
 
 ####################################################################################################
 parser = argparse.ArgumentParser()
-parser.add_argument('--spec',default=None,required=True,help='Path to original YAML to base calls off')
-parser.add_argument('--params',default=None,required=True,help='Path to json file listing hyperparameters.')
+parser.add_argument('--spec',default=None,required=False,help='Path to original YAML to base calls off')
+parser.add_argument('--params',default=None,required=False,help='Path to json file listing hyperparameters.')
 parser.add_argument('--start',type=int,default=0,help='Starting row (zero indexed)')
 parser.add_argument('--end',type=int,default=1,help='End row zero-indexed using [start,end)')
-parser.add_argument('--clear',required=False,help='Delete all jobs')
+parser.add_argument('--clear',required=False,action='store_true',help='Delete all jobs')
 args = parser.parse_args()
 
 #launch via kubectl
@@ -59,15 +60,21 @@ def clear_jobs():
 	'''
 	Get the list of jobs from the cluster and remove them.
 	'''
-	out = subprocess.run(f"kubectl get jobs",capture_output=True,text=True)
-	#parse here...
+	out   = subprocess.run(f"kubectl get jobs",capture_output=True,text=True,shell=True)
+	lines = out.stdout.split('\n')
+	for line in lines[1:-1]:
+		job_str = line.split()[0]
+		del_out = subprocess.run(f"kubectl delete job {job_str}",capture_output=True,text=True,shell=True)
+		print(del_out.stdout)
 
 if __name__ == '__main__':
+	if args.clear: #do this and nothing else.
+		print("CLEARING ALL JOBS...")
+		clear_jobs()
+		sys.exit(1)
 
 	#CHECK+LOAD HYPERPARAMETER FILE
-	if args.params is None:
-		print("No .json given for hyperparameter list.")
-		sys.exit(1)
+	assert args.params is not None, "No .json given for hyperparameter list."
 	assert os.path.isfile(args.params), "kjobs.py: INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
 		HP_LIST = json.load(fp)
