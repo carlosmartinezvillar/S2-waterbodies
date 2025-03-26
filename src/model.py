@@ -900,9 +900,36 @@ class UNet4_2(nn.Module):
 class UNet4_3(nn.Module):
 	def __init__(self,in_channels=3,out_channels=1):
 		super(UNet4_3,self).__init__()
+		self.model_name = 'unet4_3'
+		self.model_id   = model_id
+
+		# INPUT LAYER
+
+		# ENCODER
+
+		# DECODER
+
+		# LAST LAYER
+		self.out_layer = LastLayer(64,out_layer)
+
 
 	def forward(self,x):
-		return output
+		# ENCODER
+		enc_0 = self.embedding(x)
+		enc_1 = self.encoder_1(enc_0)
+		enc_2 = self.encoder_2(self.down_op_1(enc_1))
+		enc_3 = self.encoder_3(self.down_op_2(enc_2))
+		enc_4 = self.encoder_4(self.down_op_3(enc_3))
+
+		# BOTTLENECK
+		enc_5 = self.bottleneck(self.down_op_4(enc_4))
+
+		# DECODER
+		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
+		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(enc_4)],dim=1))
+		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(enc_3)],dim=1))
+		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(enc_2)],dim=1))
+		dec_0 = self.out_layer(dec_1)
 
 #TODO
 class UNet4_4(nn.Module):
@@ -965,7 +992,6 @@ class SegFormer_0(nn.Module):
 
 	def forward(self,x):
 		return x
-
 
 class AerialFormer_0(nn.Module):
 	def __init__(self,model_id,in_channels=3,out_channels=2):
