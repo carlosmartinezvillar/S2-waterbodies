@@ -31,8 +31,8 @@ def launch_jobs(template_path,start,end,hp_list):
 
 	for row in range(start,end):
 
-		#get the strings for this row
-		model_id = hp_list[row]['ID']
+		#Set the new strings for this row
+		model_id = hp_list[row]['ID'] #GET ID in json row
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
 		new_cmd_str = old_cmd_str.replace('--row 0;',f'--row {row};')
 

@@ -246,7 +246,7 @@ class ConvBlock5(nn.Module):
 
 class UpBlock5_4(ConvBlock5):
 	def __init__(self,i_ch,o_ch):
-		super().__init__()
+		super().__init__(i_ch,o_ch)
 		upconv_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 
@@ -423,12 +423,12 @@ class UNet1_3(nn.Module):
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False}
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 		
 		self.encoder_1 = ConvBlock1(32,32)
-		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
 		self.encoder_2 = ConvBlock1(64,64)
-		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
 		self.encoder_3 = ConvBlock1(128,128)
-		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
 		self.encoder_4 = ConvBlock1(256,256)
+		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
+		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
+		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
 		self.down_op_4 = nn.Conv2d(256,512,**down_op_params)
 
 		#BOTTLENECK
@@ -442,7 +442,7 @@ class UNet1_3(nn.Module):
 		self.decoder_2 = ConvBlock1(128,128)
 		self.decoder_1 = ConvBlock1(64,64)		
 		self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.up_op_2   = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.up_op_3   = nn.ConvTranspose2d(512,128,**up_op_params)
 		self.up_op_2   = nn.ConvTranspose2d(256,64,**up_op_params)
 		self.up_op_1   = nn.ConvTranspose2d(128,32,**up_op_params)
 
@@ -452,13 +452,13 @@ class UNet1_3(nn.Module):
 	def forward(self,x):
 		#ENCODER
 		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(out_0)
-		enc_2 = self.encoder_2(self.down_op_1(out_1))
-		enc_3 = self.encoder_3(self.down_op_2(out_2))
-		enc_4 = self.encoder_4(self.down_op_3(out_3))
+		enc_1 = self.encoder_1(enc_0)
+		enc_2 = self.encoder_2(self.down_op_1(enc_1))
+		enc_3 = self.encoder_3(self.down_op_2(enc_2))
+		enc_4 = self.encoder_4(self.down_op_3(enc_3))
 
 		#BOTTLENECK
-		enc_5 = self.bottleneck(self.down_op_4(out_4))
+		enc_5 = self.bottleneck(self.down_op_4(enc_4))
 
 		#DECODER
 		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
@@ -763,17 +763,17 @@ class UNet3_1(nn.Module):
 
 		# DECODER
 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
-		self.decoder_1 = ConvBlock3(512,512)
-		self.decoder_2 = ConvBlock3(256,256)
-		self.decoder_3 = ConvBlock3(128,128)
-		self.decoder_4 = ConvBlock3(64,64)
-		self.up_op_1 = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.up_op_2 = nn.ConvTranspose2d(256,128,**up_op_params)
-		self.up_op_3 = nn.ConvTranspose2d(128,64,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(64,32,**up_op_params)
+		self.decoder_4 = ConvBlock3(512,512)
+		self.decoder_3 = ConvBlock3(256,256)
+		self.decoder_2 = ConvBlock3(128,128)
+		self.decoder_1 = ConvBlock3(64,64)
+		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
+		self.up_op_3 = nn.ConvTranspose2d(512,128,**up_op_params)
+		self.up_op_2 = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.up_op_1 = nn.ConvTranspose2d(128,32,**up_op_params)
 
 		# LAST LAYER
-		self.out_layer = LastLayer(32,out_channels)
+		self.out_layer = LastLayer(64,out_channels)
 
 
 	def forward(self,x):
@@ -826,9 +826,9 @@ class UNet4_1(nn.Module):
 		self.decoder_2 = ConvBlock4(128,64)
 		self.decoder_1 = ConvBlock4(64,32)
 		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(256,128,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(128,64,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(64,32,**up_op_params)				
+		self.up_op_3 = nn.ConvTranspose2d(256,128,**up_op_params)
+		self.up_op_2 = nn.ConvTranspose2d(128,64,**up_op_params)
+		self.up_op_1 = nn.ConvTranspose2d(64,32,**up_op_params)				
 
 		# LAST LAYER
 		self.out_layer = LastLayer(32,out_channels)
@@ -885,9 +885,9 @@ class UNet4_2(nn.Module):
 		self.decoder_2 = ConvBlock4(128,64)
 		self.decoder_1 = ConvBlock4(64,32)
 		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(256,128,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(128,64,**up_op_params)
-		self.up_op_4 = nn.ConvTranspose2d(64,32,**up_op_params)				
+		self.up_op_3 = nn.ConvTranspose2d(256,128,**up_op_params)
+		self.up_op_2 = nn.ConvTranspose2d(128,64,**up_op_params)
+		self.up_op_1 = nn.ConvTranspose2d(64,32,**up_op_params)				
 
 		# LAST LAYER
 		self.out_layer = LastLayer(32,out_channels)
@@ -927,10 +927,10 @@ class UNet4_3(nn.Module):
 		self.encoder_2 = ConvBlock4(64,64)
 		self.encoder_3 = ConvBlock4(128,128)
 		self.encoder_4 = ConvBlock4(256,256)
-		self.down_op_1 = nn.Conv2d(32,64)
-		self.down_op_2 = nn.Conv2d(64,128)
-		self.down_op_3 = nn.Conv2d(128,256)
-		self.down_op_4 = nn.Conv2d(256,512)
+		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
+		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
+		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
+		self.down_op_4 = nn.Conv2d(256,512,**down_op_params)
 
 		# BOTTLENECK
 		self.bottleneck = ConvBlock4(512,512)
@@ -941,10 +941,10 @@ class UNet4_3(nn.Module):
 		self.decoder_3 = ConvBlock4(256,256)
 		self.decoder_2 = ConvBlock4(128,128)
 		self.decoder_1 = ConvBlock4(64,64)
-		self.up_op_4 = nn.ConvTranspose2d(512,256)
-		self.up_op_3 = nn.ConvTranspose2d(512,128)
-		self.up_op_2 = nn.ConvTranspose2d(256,64)
-		self.up_op_1 = nn.ConvTranspose2d(128,32)
+		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
+		self.up_op_3 = nn.ConvTranspose2d(512,128,**up_op_params)
+		self.up_op_2 = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.up_op_1 = nn.ConvTranspose2d(128,32,**up_op_params)
 
 		# LAST LAYER
 		self.out_layer = LastLayer(64,out_channels)
@@ -963,9 +963,9 @@ class UNet4_3(nn.Module):
 
 		# DECODER
 		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
-		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(enc_4)],dim=1))
-		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(enc_3)],dim=1))
-		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(enc_2)],dim=1))
+		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
+		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
+		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
 		dec_0 = self.out_layer(dec_1)
 		return dec_0
 
@@ -1243,7 +1243,36 @@ class UNet6_1(nn.Module):
 		self.model_name = 'unet6_1'
 		self.model_id = model_id
 
+		# FIRST LAYER
 		self.embedding = EmbeddingLayer(in_channels,32)
+
+		# ENCODER
+		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+		self.encoder_1 = ConvBlock6(32,32)
+		self.encoder_2 = ConvBlock6(64,64)
+		self.encoder_3 = ConvBlock6(128,128)
+		self.encoder_4 = ConvBlock6(256,256)
+		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
+		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
+		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
+		self.down_op_4 = nn.Conv2d(256,512,**down_op_params)
+
+		# BOTTLENECK
+		self.bottleneck = ConvBlock6(512,512)
+
+		# DECODER
+		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+		self.decoder_4 = ConvBlock6(512,512)
+		self.decoder_3 = ConvBlock6(256,256)
+		self.decoder_2 = ConvBlock6(128,128)
+		self.decoder_1 = ConvBlock6(64,64)
+		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
+		self.up_op_3 = nn.ConvTranspose2d(512,128,**up_op_params)
+		self.up_op_2 = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.up_op_1 = nn.ConvTranspose2d(128,32,**up_op_params)
+
+		# LAST LAYER
+		self.out_layer = LastLayer(64,out_channels)
 
 
 	def forward(self,x):
@@ -1284,12 +1313,12 @@ class AerialFormer_0(nn.Module):
 		super().__init__()
 
 	def forward(self,x):
+		pass
 
 ################################################################################
 # LOSS FUNCTIONS
 ################################################################################
 class EdgeWeightedLoss(nn.Module):
-
 	def __init__(self,alpha=0.7,beta=0.3):
 		super().__init__()
 		self.alpha = alpha
@@ -1305,23 +1334,26 @@ class EdgeWeightedLoss(nn.Module):
 if __name__ == '__main__':
 	# TEST MODELS
 	import dload
-	tr_ds = SentinelDataset('../../Desktop/chips_sorted/training')
-	va_ds = SentinelDataset('../../Desktop/chips_sorted/validation')
-	tr_dl   = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
-	va_dl   = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
+	tr_ds = dload.SentinelDataset('../../chips_sorted/training')
+	va_ds = dload.SentinelDataset('../../chips_sorted/validation')
+	tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
+	va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
+	data_iter = iter(va_dl)
 
-	test_these = ["UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
-	"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4"]
+	test_these = [
+		"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
+		"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
+		"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
 
 	for _ in test_these: #nevermind unit testing...
 		print('='*60)
-		print("TESTING {_}")
+		print(f"TESTING {_}")
 		print('='*60)		
-		exec(f"net = model.{_}('999',in_channels=3,out_channels=2)")
+		exec(f"net = {_}('999',in_channels=3,out_channels=2)")
 
-		X,T = next(va_dl)
-		print(f"{X.shape} | {T.shape} | ",end='')
+		X,T = next(data_iter)
+		print(f"X: {X.shape}\nT: {T.shape}")
 		y = net(X)
-		print(y.shape)
+		print(f"Y: {y.shape}")
 		print("GOOD.")
 
