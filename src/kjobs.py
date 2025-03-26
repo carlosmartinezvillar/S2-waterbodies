@@ -8,8 +8,8 @@ import json
 parser = argparse.ArgumentParser()
 parser.add_argument('--spec',default=None,required=True,help='Path to original YAML to base calls off')
 parser.add_argument('--params',default=None,required=True,help='Path to json file listing hyperparameters.')
-parser.add_argument('--start',type=int,default=0,help='Starting row')
-parser.add_argument('--end',type=int,default=1,help='End row')
+parser.add_argument('--start',type=int,default=0,help='Starting row (zero indexed)')
+parser.add_argument('--end',type=int,default=1,help='End row zero-indexed using [start,end)')
 parser.add_argument('--clear',required=False,help='Delete all jobs')
 args = parser.parse_args()
 
