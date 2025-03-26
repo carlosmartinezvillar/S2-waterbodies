@@ -16,5 +16,5 @@
 {"ID":15,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet5_2"},
 {"ID":16,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet5_3"},
 {"ID":17,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet5_4"},
-{"ID":18,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet6_1"},
+{"ID":18,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet6_1"}
 ]
