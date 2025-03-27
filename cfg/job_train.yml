@@ -15,14 +15,14 @@ spec:
           resources:
             limits:
               memory: 32Gi
-              cpu: 8
+              cpu: 10
               nvidia.com/gpu: 1
-              ephemeral-storage: 30Gi 
+              ephemeral-storage: 40Gi 
             requests:
               memory: 32Gi
-              cpu: 8
+              cpu: 10
               nvidia.com/gpu: 1
-              ephemeral-storage: 30Gi
+              ephemeral-storage: 40Gi
 
           volumeMounts:
             - mountPath: /cache
@@ -55,7 +55,7 @@ spec:
       volumes:
       - name: cache-vol
         emptyDir:
-          sizeLimit: 50G
+          sizeLimit: 40Gi
           # medium: Memory
 
       - name: zipped-vol
@@ -73,6 +73,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
+          sizeLimit: 24Gi
 
       restartPolicy: Never
 
@@ -81,13 +82,13 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                # - key: topology.kubernetes.io/region
-                #   operator: In
-                #   values:
-                #   - us-central  
+                - key: topology.kubernetes.io/region
+                  operator: In
+                  values:
+                  - us-central  
                 - key: nvidia.com/gpu.product
                   operator: In
                   values:
                   - NVIDIA-GeForce-RTX-3090
 
-  backoffLimit: 1
+  backoffLimit: 0

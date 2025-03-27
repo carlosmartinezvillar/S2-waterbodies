@@ -50,7 +50,7 @@ def launch_jobs(template_path,start,end,hp_list):
 		if out.returncode != 0:
 			print(f"ERROR launching job for model listed in row {row}")
 			print(out.stderr)
-		print(out.stdout)
+		print(f"STDOUT:{out.stdout}")
 
 	#clear temp file
 	os.remove('../cfg/temp.yml')
