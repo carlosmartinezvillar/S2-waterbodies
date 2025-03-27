@@ -167,9 +167,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		print(f'Best validation IoU: {best_iou:.4f}')
 
 		#LOG BATCH LOSSes
-		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv') as batch_fp:
+		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv','w+') as batch_fp:
 			batch_fp.writelines([f'{_:.5f}\n' for _ in tr_batch_loss])
-		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv') as batch_fp:
+		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv','w+') as batch_fp:
 			batch_fp.writelines([f'{_:.5f}\n' for _ in va_batch_loss])
 
 
