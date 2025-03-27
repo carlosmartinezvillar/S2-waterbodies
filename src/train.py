@@ -63,10 +63,10 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 	best_epoch = 0
 	epoch_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
 	epoch_logger = utils.Logger(f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv',epoch_header)
-	tr_batch_loss = []
-	va_batch_loss = []
 
 	for epoch in range(n_epochs):
+		tr_batch_loss = []
+		va_batch_loss = []
 		M_tr = utils.ConfusionMatrix(n_classes=2)
 		M_va = utils.ConfusionMatrix(n_classes=2)
 		epoch_start_time = time.time()
@@ -103,6 +103,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			Y = output.detach().cpu().numpy().max(axis=1)
 			T = T.detach().cpu().numpy()
 			M_tr.update(Y,T)
+			tr_batch_loss.append(loss.item())
 
 			# update bar
 			t.set_postfix(loss='{:05.4f}'.format(tr_loss_sum/samples_ran))
@@ -140,6 +141,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			va_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
+			va_batch_loss.append(loss.item())
 
 			t.set_postfix(loss='{:05.4f}'.format(va_loss_sum/samples_ran))
 			t.update(1)
@@ -167,9 +169,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		print(f'Best validation IoU: {best_iou:.4f}')
 
 		#LOG BATCH LOSSes
-		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv','w+') as batch_fp:
+		if epoch == 0:
+			batch_fp_mode = 'w+'
+		else:
+			batch_fp_mode = 'a'
+		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv',batch_fp_mode) as batch_fp:
 			batch_fp.writelines([f'{_:.5f}\n' for _ in tr_batch_loss])
-		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv','w+') as batch_fp:
+		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv',batch_fp_mode) as batch_fp:
 			batch_fp.writelines([f'{_:.5f}\n' for _ in va_batch_loss])
 
 
@@ -230,7 +236,7 @@ if __name__ == "__main__":
 	if HP['SCHEDULER'] == "step":
 		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.3)
 	elif HP['SCHEDULER'] == "exp":
-		scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.8)
+		scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.9)
 	else:
 		scheduler = None	
 
