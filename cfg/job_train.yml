@@ -17,18 +17,18 @@ spec:
               memory: 32Gi
               cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: 50Gi 
+              ephemeral-storage: 30Gi 
             requests:
               memory: 32Gi
               cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: 50Gi
+              ephemeral-storage: 30Gi
 
           volumeMounts:
             - mountPath: /cache
               name: cache-vol
 
-            - mountPath: /chips_zipped_pvc
+            - mountPath: /chips_pvc
               name: zipped-vol
 
             - mountPath: /log_pvc
@@ -43,7 +43,7 @@ spec:
           command: ["/bin/sh","-c"]
           args:
           - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
-            cp chips_zipped_pvc/chips_sorted.zip cache/;
+            cp chips_pvc/chips_sorted.zip cache/;
             unzip -q cache/chips_sorted.zip -d cache/;
             mkdir /cache/model;
             mkdir /cache/logs;
@@ -60,7 +60,7 @@ spec:
 
       - name: zipped-vol
         persistentVolumeClaim:
-          claimName: lake-chips-zipped-sorted
+          claimName: lake-chips-sorted
 
       - name: log-vol
         persistentVolumeClaim:
