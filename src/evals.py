@@ -22,7 +22,7 @@ def plot_training_log(log_path,out_dir):
 	with open(log_path,'r') as fp:
 		header = fp.readline().rstrip('\n').split('\t')
 		lines  = [_.rstrip('\n').split('\t') for _ in list(fp)]
-		array  = np.array(lines).astype(float)
+	array  = np.array(lines).astype(float)
 
 	fig = plt.figure()
 	ax  = fig.add_subplot(111)
@@ -122,6 +122,7 @@ def find_best_performer(log_dir,hp_file,metric='v_iou'):
 	plt.savefig(f"{log_dir}/model_metric.png")
 	plt.close()
 
+
 def match_parameter_performance():
 	'''
 	A function that matches model performance and the parameters that yielded
@@ -129,6 +130,7 @@ def match_parameter_performance():
 	And (ii) a row in the training log (the best performer across epochs).
 	'''
 	pass
+
 
 def plot_batch_log(log_path,out_dir):
 
@@ -143,26 +145,29 @@ def plot_batch_log(log_path,out_dir):
 	with open(valid_path,'r') as fp:
 		valid_lines  = [float(_.rstrip('\n')) for _ in list(fp)]
 
-	# N_train = len(train_lines)
-	# N_valid = len(valid_lines)
-	# batches_per_train = N_train/50
-	# batches_per_valid = N_valid/50
-
-	# empty_valid = np.empty(N_train,dtype=float)
-	# empty_valid[:] = np.nan
-
 	fig = plt.figure(figsize=(14,7))
 	fig.suptitle("Batch Loss")
 	ax1  = fig.add_subplot(121)
-	ax1.plot(train_lines,label='Training',linestyle='-',linewidth=0.5,color='C0')
+	ax1.plot(train_lines,label='Training',linestyle='-',linewidth=0.3,color='C0')
 	ax1.set_title("Training")
 	ax2  = fig.add_subplot(122)
-	ax2.plot(valid_lines,label='Validation',linestyle='-',linewidth=0.5,color='C1')
+	ax2.plot(valid_lines,label='Validation',linestyle='-',linewidth=0.3,color='C1')
 	ax2.set_title("Validation")
 	ax2.sharey(ax1)
 	plt.tight_layout()
 	plt.savefig(f'{out_dir}/batch_{model_nr}.png')
-	plt.close()	
+	plt.close()
+
+
+def plot_all_batch_log(log_dir,out_dir):
+
+	files = glob("train_batch_log_*.tsv",root_dir=log_dir)
+	if log_dir[-1] == '/':
+		log_dir=log_dir.rstrip('/')
+
+	for file in files:
+		plot_batch_log(f"{log_dir}/{file}",out_dir)
+
 
 if __name__ == '__main__':
 	# find_best_performer('../../lake_logs','params.json')

@@ -77,7 +77,7 @@ if __name__ == '__main__':
 	assert args.params is not None, "No .json given for hyperparameter list."
 	assert os.path.isfile(args.params), "kjobs.py: INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
-		HP_LIST = json.load(fp)
+		HP_LIST = [json.loads(l) for l in fp.readlines()]
 	N = len(HP_LIST)
 	assert N > 0, "kjobs.py: GOT EMPTY JSON FILE."
 
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 	else:
 		end_index = N #for range(start,end) which already n-1
 
-	#CHECK YAML TEMPLATE
+	#CHECK YAML TEMPLATE EXISTS
 	assert os.path.isfile(args.spec), "kjobs.py: INCORRECT YAML TEMPLATE PATH IN SPEC ARG"
 
 	#RUN

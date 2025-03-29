@@ -199,7 +199,8 @@ if __name__ == "__main__":
 	#some checks
 	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
-		HP_LIST = json.load(fp)
+		lines = fp.readlines()
+		HP_LIST = [json.loads(l) for l in lines]
 	assert len(HP_LIST) > 0, "GOT EMPTY JSON FILE."
 	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
 
@@ -280,5 +281,5 @@ if __name__ == "__main__":
 	}
 
 	#---------- RUN ----------
-	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=50)
+	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=100)
 
