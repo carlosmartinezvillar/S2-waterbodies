@@ -82,10 +82,10 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                - key: topology.kubernetes.io/region
-                  operator: In
-                  values:
-                  - us-central  
+                # - key: topology.kubernetes.io/region
+                #   operator: In
+                #   values:
+                #   - us-central  
                 - key: nvidia.com/gpu.product
                   operator: In
                   values:
