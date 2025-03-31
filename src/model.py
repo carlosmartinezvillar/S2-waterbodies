@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class EmbeddingLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(EmbeddingLayer,self).__init__()
-		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1)
+		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=False)
 
 	def forward(self,x):
 		return self.conv(x)
@@ -16,7 +16,7 @@ class EmbeddingLayer(nn.Module):
 class LastLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(LastLayer,self).__init__()
-		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1)
+		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=False)
 
 	def forward(self,x):
 		return self.conv(x)
@@ -301,17 +301,14 @@ class UNet1_1(nn.Module):
         self.model_name = 'unet1_1'
        	self.model_id   = model_id
 
-        # FIRST LAYER
-        self.embedding = EmbeddingLayer(in_channels,16)
-
         # ENCODER
-        self.encoder_1 = ConvBlock1(16,32,'A')
+        self.encoder_1 = ConvBlock1(in_channels,32,'A')
+        self.down_op_1 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         self.encoder_2 = ConvBlock1(32,64,'A')
-        self.encoder_3 = ConvBlock1(64,128,'A')
-        self.encoder_4 = ConvBlock1(128,256,'A')
-        self.down_op_1 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
         self.down_op_2 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
-        self.down_op_3 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)          
+        self.encoder_3 = ConvBlock1(64,128,'A')
+        self.down_op_3 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+        self.encoder_4 = ConvBlock1(128,256,'A')
         self.down_op_4 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
         
         # BOTTLENECK
@@ -332,8 +329,7 @@ class UNet1_1(nn.Module):
 
     def forward(self, x):
         # ENCODER
-        enc_0  = self.embedding(x)
-        enc_1 = self.encoder_1(enc_0)
+        enc_1 = self.encoder_1(x)
         enc_2 = self.encoder_2(self.down_op_1(enc_1))
         enc_3 = self.encoder_3(self.down_op_2(enc_2))
         enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -356,13 +352,10 @@ class UNet1_2(nn.Module):
 		self.model_name = 'unet1_2'
 		self.model_id   = model_id
 
-		#EMBEDDING
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		#ENCODER
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False} #alt--mirror upconv
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 
-		self.encoder_1 = ConvBlock1(16,32,'A')
+		self.encoder_1 = ConvBlock1(in_channels,32,'A')
 		self.down_op_1 = nn.Conv2d(32,32,**down_op_params) #only on HxW
 		self.encoder_2 = ConvBlock1(32,64,'A')
 		self.down_op_2 = nn.Conv2d(64,64,**down_op_params)
@@ -388,9 +381,7 @@ class UNet1_2(nn.Module):
 		self.out_layer = LastLayer(32,out_channels)
 
 	def forward(self,x):
-		#ENCODER
-		out_0 = self.embedding(x)
-		out_1 = self.encoder_1(out_0)
+		out_1 = self.encoder_1(x)
 		out_2 = self.encoder_2(self.down_op_1(out_1))
 		out_3 = self.encoder_3(self.down_op_2(out_2))
 		out_4 = self.encoder_4(self.down_op_3(out_3))
@@ -415,14 +406,11 @@ class UNet1_3(nn.Module):
 		self.model_name = 'unet1_3'
 		self.model_id = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
 		#ENCODER
 		# features = [32,64,128,256,512]
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0,'bias':False}
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 		
-		self.encoder_1 = ConvBlock1(32,32)
+		self.encoder_1 = ConvBlock1(in_channels,32)
 		self.encoder_2 = ConvBlock1(64,64)
 		self.encoder_3 = ConvBlock1(128,128)
 		self.encoder_4 = ConvBlock1(256,256)
@@ -451,8 +439,7 @@ class UNet1_3(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -475,11 +462,8 @@ class UNet1_4(nn.Module):
 		self.model_name = 'unet1_4'
 		self.model_id = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		#ENCODER
-		self.encoder_1 = ConvBlock1(16,32,'B') #'B' first conv reduces HxW
+		self.encoder_1 = ConvBlock1(in_channels,32,'B') #'B' first conv reduces HxW
 		self.encoder_2 = ConvBlock1(32,64,'B')
 		self.encoder_3 = ConvBlock1(64,128,'B')
 		self.encoder_4 = ConvBlock1(128,256,'B')
@@ -498,8 +482,7 @@ class UNet1_4(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(enc_1)
 		enc_3 = self.encoder_3(enc_2)
 		enc_4 = self.encoder_4(enc_3)
@@ -523,12 +506,9 @@ class UNet2_1(nn.Module):
 		self.model_name = 'unet2_1'
 		self.model_id   = model_id
 
-		# FIRST LAYER
-		self.embedding  = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		down_op_params = {'kernel_size':2,'stride':2,'padding':0}
-		self.encoder_1 = ConvBlock2(16,32)
+		self.encoder_1 = ConvBlock2(in_channels,32)
 		self.encoder_2 = ConvBlock2(32,64)
 		self.encoder_3 = ConvBlock2(64,128)
 		self.encoder_4 = ConvBlock2(128,256)
@@ -557,8 +537,7 @@ class UNet2_1(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -581,12 +560,10 @@ class UNet2_2(nn.Module):
 		self.model_name = 'unet2_2'
 		self.model_id   = model_id
 
-		self.embedding  = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		#features = [16,32,64,128,256,512]
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder_1 = ConvBlock2(16,32)
+		self.encoder_1 = ConvBlock2(in_channels,32)
 		self.encoder_2 = ConvBlock2(32,64)
 		self.encoder_3 = ConvBlock2(64,128)
 		self.encoder_4 = ConvBlock2(128,256)
@@ -616,8 +593,7 @@ class UNet2_2(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -640,12 +616,9 @@ class UNet2_3(nn.Module):
 		self.model_name = 'unet2_3'
 		self.model_id   = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
 		#ENCODER
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder_1 = ConvBlock2(32,32)
+		self.encoder_1 = ConvBlock2(in_channels,32)
 		self.encoder_2 = ConvBlock2(64,64)
 		self.encoder_3 = ConvBlock2(128,128)
 		self.encoder_4 = ConvBlock2(256,256)
@@ -673,8 +646,7 @@ class UNet2_3(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -697,11 +669,8 @@ class UNet2_4(nn.Module):
 		self.model_name = 'unet2_4'
 		self.model_id   = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		#ENCODER
-		self.encoder_1 = ConvBlock2(16,32,'B')
+		self.encoder_1 = ConvBlock2(in_channels,32,'B')
 		self.encoder_2 = ConvBlock2(32,64,'B')
 		self.encoder_3 = ConvBlock2(64,128,'B')
 		self.encoder_4 = ConvBlock2(128,256,'B')
@@ -715,13 +684,12 @@ class UNet2_4(nn.Module):
 		self.decoder_2 = UpBlock2_4(128,32)
 		self.decoder_1 = UpBlock2_4(64,16)
 
-		#LAST LAYERS
+		#LAST LAYER
 		self.out_layer = LastLayer(16,out_channels)
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(enc_1)
 		enc_3 = self.encoder_3(enc_2)
 		enc_4 = self.encoder_4(enc_3)
@@ -744,11 +712,9 @@ class UNet3_1(nn.Module):
 		self.model_name = 'unet3_1'
 		self.model_id   = model_id
 
-		# FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
-		# ENCODER
+		# ENCODER -- needs an embedding conv to join block input to output
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=2,padding=1)
 		self.encoder_1 = ConvBlock3(32,32)
 		self.encoder_2 = ConvBlock3(64,64)
 		self.encoder_3 = ConvBlock3(128,128)
@@ -778,8 +744,8 @@ class UNet3_1(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		x = self.embedding(x)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -802,12 +768,9 @@ class UNet4_1(nn.Module):
 		self.model_name = 'unet4_1'
 		self.model_id   = model_id
 
-		# INPUT LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		down_op_params = {'kernel_size':2,'stride':2,'padding':0}		
-		self.encoder_1 = ConvBlock4(16,32)
+		self.encoder_1 = ConvBlock4(in_channels,32)
 		self.encoder_2 = ConvBlock4(32,64)
 		self.encoder_3 = ConvBlock4(64,128)
 		self.encoder_4 = ConvBlock4(128,256)
@@ -835,8 +798,7 @@ class UNet4_1(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)		
+		enc_1 = self.encoder_1(x)		
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -859,13 +821,10 @@ class UNet4_2(nn.Module):
 		self.model_name = 'unet4_2'
 		self.model_id   = model_id
 
-		# INPUT LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		# down_op_params = {'kernel_size':2,'stride':2,'padding':0}
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False} 				
-		self.encoder_1 = ConvBlock4(16,32)
+		self.encoder_1 = ConvBlock4(in_channels,32)
 		self.encoder_2 = ConvBlock4(32,64)
 		self.encoder_3 = ConvBlock4(64,128)
 		self.encoder_4 = ConvBlock4(128,256)
@@ -894,8 +853,8 @@ class UNet4_2(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)		
+		x = (x)
+		enc_1 = self.encoder_1(x)		
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -918,12 +877,9 @@ class UNet4_3(nn.Module):
 		self.model_name = 'unet4_3'
 		self.model_id   = model_id
 
-		# INPUT LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
 		# ENCODER
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder_1 = ConvBlock4(32,32)
+		self.encoder_1 = ConvBlock4(in_channels,32)
 		self.encoder_2 = ConvBlock4(64,64)
 		self.encoder_3 = ConvBlock4(128,128)
 		self.encoder_4 = ConvBlock4(256,256)
@@ -952,8 +908,7 @@ class UNet4_3(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -976,11 +931,8 @@ class UNet4_4(nn.Module):
 		self.model_name = 'unet4_4'
 		self.model_id = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		#ENCODER
-		self.encoder_1 = ConvBlock4(16,32,'B') #'B' first conv reduces HxW
+		self.encoder_1 = ConvBlock4(in_channels,32,'B') #'B' first conv reduces HxW
 		self.encoder_2 = ConvBlock4(32,64,'B')
 		self.encoder_3 = ConvBlock4(64,128,'B')
 		self.encoder_4 = ConvBlock4(128,256,'B')
@@ -999,8 +951,7 @@ class UNet4_4(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(enc_1)
 		enc_3 = self.encoder_3(enc_2)
 		enc_4 = self.encoder_4(enc_3)
@@ -1023,12 +974,9 @@ class UNet5_1(nn.Module):
 		self.model_name = 'unet5_1'
 		self.model_id   = model_id
 
-		# FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		down_op_params = {'kernel_size':2,'stride':2,'padding':0}
-		self.encoder_1 = ConvBlock5(16,32)
+		self.encoder_1 = ConvBlock5(in_channels,32)
 		self.encoder_2 = ConvBlock5(32,64)
 		self.encoder_3 = ConvBlock5(64,128)
 		self.encoder_4 = ConvBlock5(128,256)
@@ -1056,8 +1004,7 @@ class UNet5_1(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -1080,12 +1027,10 @@ class UNet5_2(nn.Module):
 		self.model_name = 'unet5_2'
 		self.model_id   = model_id
 
-		self.embedding  = EmbeddingLayer(in_channels,16)
-
 		# ENCODER
 		#features = [16,32,64,128,256,512]
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder_1 = ConvBlock5(16,32)
+		self.encoder_1 = ConvBlock5(in_channels,32)
 		self.encoder_2 = ConvBlock5(32,64)
 		self.encoder_3 = ConvBlock5(64,128)
 		self.encoder_4 = ConvBlock5(128,256)
@@ -1115,8 +1060,7 @@ class UNet5_2(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -1139,12 +1083,9 @@ class UNet5_3(nn.Module):
 		self.model_name = 'unet5_3'
 		self.model_id   = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
 		#ENCODER
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.encoder_1 = ConvBlock5(32,32)
+		self.encoder_1 = ConvBlock5(in_channels,32)
 		self.encoder_2 = ConvBlock5(64,64)
 		self.encoder_3 = ConvBlock5(128,128)
 		self.encoder_4 = ConvBlock5(256,256)
@@ -1172,8 +1113,7 @@ class UNet5_3(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -1196,11 +1136,8 @@ class UNet5_4(nn.Module):
 		self.model_name = 'unet5_4'
 		self.model_id   = model_id
 
-		#FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,16)
-
 		#ENCODER
-		self.encoder_1 = ConvBlock5(16,32,'B')
+		self.encoder_1 = ConvBlock5(in_channels,32,'B')
 		self.encoder_2 = ConvBlock5(32,64,'B')
 		self.encoder_3 = ConvBlock5(64,128,'B')
 		self.encoder_4 = ConvBlock5(128,256,'B')
@@ -1219,8 +1156,7 @@ class UNet5_4(nn.Module):
 
 	def forward(self,x):
 		#ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(enc_1)
 		enc_3 = self.encoder_3(enc_2)
 		enc_4 = self.encoder_4(enc_3)
@@ -1236,18 +1172,16 @@ class UNet5_4(nn.Module):
 		dec_0 = self.out_layer(dec_1)
 		return dec_0
 
-#TODO
+
 class UNet6_1(nn.Module):
 	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super().__init__()
 		self.model_name = 'unet6_1'
 		self.model_id = model_id
 
-		# FIRST LAYER
-		self.embedding = EmbeddingLayer(in_channels,32)
-
-		# ENCODER
+		# ENCODER -- needs an embedding conv to join block input to output
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
+		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=1,padding=1)
 		self.encoder_1 = ConvBlock6(32,32)
 		self.encoder_2 = ConvBlock6(64,64)
 		self.encoder_3 = ConvBlock6(128,128)
@@ -1277,8 +1211,8 @@ class UNet6_1(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		enc_0 = self.embedding(x)
-		enc_1 = self.encoder_1(enc_0)
+		x = self.embedding(x)
+		enc_1 = self.encoder_1(x)
 		enc_2 = self.encoder_2(self.down_op_1(enc_1))
 		enc_3 = self.encoder_3(self.down_op_2(enc_2))
 		enc_4 = self.encoder_4(self.down_op_3(enc_3))
@@ -1333,65 +1267,87 @@ class EdgeWeightedLoss(nn.Module):
 ################################################################################
 # OTHER/UTILITIES/TESTING
 ################################################################################
-def batch_cpu_profiler(data_iter,model):
+def batch_cpu_profiler(data_iter,model_str):
 	from torch.profiler import profile, record_function, ProfilerActivity
-
-	print('='*60)
-	print(f"TESTING {model.model_name}")
-	print('='*60)		
-	# exec(f"model = {model_str}('999',in_channels=3,out_channels=2)")
-
+	print('='*30)
+	print(f"PROFILER (CPU) FOR {model_str}")
+	print('='*30)		
+	model = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
 	X,T = next(data_iter)
 
 	with profile(activities=[ProfilerActivity.CPU],profile_memory=True,record_shapes=True) as prof:
-		y = model(X)
+		# with record_function("other_functions"):
+		Y = model(X)
 
 	print(prof.key_averages().table())
 
 
 def batch_cuda_profiler(data_iter,model_str):
 	from torch.profiler import profile, record_function, ProfilerActivity
-
-	print('='*60)
-	print(f"TESTING {model.model_name}")
-	print('='*60)		
-	# exec(f"model = {model_str}('999',in_channels=3,out_channels=2)")
-
+	print('='*30)
+	print(f"PROFILER (CUDA) FOR {model_str}")
+	print('='*30)		
+	eval(f"model = {model_str}('999',in_channels=3,out_channels=2)")
 	X,T = next(data_iter)
 
-	with profile(activities=[ProfilerActivity.CUDA],profile_memory=True,record_shapes=True) as prof:
-		y = model(X)
+	with profile(activities=[
+			ProfilerActivity.CPU,
+			ProfilerActivity.CUDA
+		],profile_memory=True,record_shapes=True) as prof:
+
+		Y = model(X)
 
 	print(prof.key_averages().table())
+
 
 def epoch_cpu_profiler(data_iter,model_str):
 	pass
 
+
 def epoch_cuda_profiler(data_iter,model_str):
 	pass
 
-def test_models(data_iter,model_str=None):
 
-	if model_str is None:
-		all_models = [
-			"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
-			"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
-			"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]		
-		test_these = all_models #just a note for future me
+def check_pass_all(data_iter,model_str=None):
+
+	if model_str is None:		
+		test_these = all_models
 	else:
 		test_these = [model_str]
 
 	for _ in test_these: #nevermind unit testing...
 		print('='*60)
-		print(f"TESTING {_}")
+		print(f"TESTING PASS ON {_}")
 		print('='*60)		
-		exec(f"net = {_}('999',in_channels=3,out_channels=2)")
+		net = eval(f"{_}('999',in_channels=3,out_channels=2)")
+
+		n_parameters = sum([p.numel() for p in net.parameters()])
+		print(f"# OF PARAMETERS: {n_parameters}")
 
 		X,T = next(data_iter)
-		print(f"X: {X.shape}\nT: {T.shape}")
+		print(f"X: {X.shape} | T: {T.shape}")
 		y = net(X)
-		print(f"Y: {y.shape}")
-		print("GOOD.")
+		print(f"Y: {y.shape} -- GOOD.")
+
+
+def print_model_parameters(model_str):
+	net = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
+	P = [(p[0],p[1].numel(),p[1].shape) for p in net.named_parameters()]
+	P_sum = 0
+	print(f"{'MODULE'.ljust(20)}\t{'# PARAM'.rjust(10)}\tSHAPE")
+	print("-"*80)
+	for name,count,shape in P:
+		P_sum += count
+		print(f"{name:<20}\t{count:>10}\t{shape}")
+	print("-"*80)
+	print(f"{'TOTAL'.ljust(20)}\t{P_sum:>10}")
+
+
+all_models = [
+	"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
+	"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
+	"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
+
 
 if __name__ == '__main__':
 	# TEST MODELS
@@ -1403,7 +1359,6 @@ if __name__ == '__main__':
 	va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
 	data_iter = iter(va_dl)
 
-	# test_models(data_iter)
-	model = UNet2_1('999')
-	batch_cpu_profiler(data_iter,model)
-
+	# print_model_parameters("UNet6_1")
+	# check_pass_all(data_iter)
+	batch_cpu_profiler(data_iter,"UNet6_1")

@@ -14,15 +14,15 @@ spec:
 
           resources:
             limits:
-              memory: 32Gi
-              cpu: 10
+              memory: 16Gi
+              cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: Gi 
+              ephemeral-storage: 20Gi 
             requests:
-              memory: 32Gi
-              cpu: 10
+              memory: 16Gi
+              cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: 40Gi
+              ephemeral-storage: 20Gi
 
           volumeMounts:
             - mountPath: /cache
@@ -55,7 +55,7 @@ spec:
       volumes:
       - name: cache-vol
         emptyDir:
-          sizeLimit: 40Gi
+          sizeLimit: 20Gi
           # medium: Memory
 
       - name: zipped-vol
@@ -91,4 +91,4 @@ spec:
                   values:
                   - NVIDIA-GeForce-RTX-3090
 
-  backoffLimit: 0
+  backoffLimit: 1
