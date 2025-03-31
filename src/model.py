@@ -1316,7 +1316,7 @@ class AerialFormer_0(nn.Module):
 		pass
 
 ################################################################################
-# LOSS FUNCTIONS
+# LOSSES
 ################################################################################
 class EdgeWeightedLoss(nn.Module):
 	def __init__(self,alpha=0.7,beta=0.3):
@@ -1330,20 +1330,56 @@ class EdgeWeightedLoss(nn.Module):
 		loss = torch.exp(-weight**2)/self.sigma
 		return loss
 
+################################################################################
+# OTHER/UTILITIES/TESTING
+################################################################################
+def batch_cpu_profiler(data_iter,model):
+	from torch.profiler import profile, record_function, ProfilerActivity
 
-if __name__ == '__main__':
-	# TEST MODELS
-	import dload
-	tr_ds = dload.SentinelDataset('../../chips_sorted/training')
-	va_ds = dload.SentinelDataset('../../chips_sorted/validation')
-	tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
-	va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
-	data_iter = iter(va_dl)
+	print('='*60)
+	print(f"TESTING {model.model_name}")
+	print('='*60)		
+	# exec(f"model = {model_str}('999',in_channels=3,out_channels=2)")
 
-	test_these = [
-		"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
-		"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
-		"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
+	X,T = next(data_iter)
+
+	with profile(activities=[ProfilerActivity.CPU],profile_memory=True,record_shapes=True) as prof:
+		y = model(X)
+
+	print(prof.key_averages().table())
+
+
+def batch_cuda_profiler(data_iter,model_str):
+	from torch.profiler import profile, record_function, ProfilerActivity
+
+	print('='*60)
+	print(f"TESTING {model.model_name}")
+	print('='*60)		
+	# exec(f"model = {model_str}('999',in_channels=3,out_channels=2)")
+
+	X,T = next(data_iter)
+
+	with profile(activities=[ProfilerActivity.CUDA],profile_memory=True,record_shapes=True) as prof:
+		y = model(X)
+
+	print(prof.key_averages().table())
+
+def epoch_cpu_profiler(data_iter,model_str):
+	pass
+
+def epoch_cuda_profiler(data_iter,model_str):
+	pass
+
+def test_models(data_iter,model_str=None):
+
+	if model_str is None:
+		all_models = [
+			"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
+			"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
+			"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]		
+		test_these = all_models #just a note for future me
+	else:
+		test_these = [model_str]
 
 	for _ in test_these: #nevermind unit testing...
 		print('='*60)
@@ -1356,4 +1392,18 @@ if __name__ == '__main__':
 		y = net(X)
 		print(f"Y: {y.shape}")
 		print("GOOD.")
+
+if __name__ == '__main__':
+	# TEST MODELS
+	import dload
+	data_dir = '../../chips_sorted'
+	tr_ds = dload.SentinelDataset(f'{data_dir}/training')
+	va_ds = dload.SentinelDataset(f'{data_dir}/validation')
+	tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
+	va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
+	data_iter = iter(va_dl)
+
+	# test_models(data_iter)
+	model = UNet2_1('999')
+	batch_cpu_profiler(data_iter,model)
 
