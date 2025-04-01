@@ -1267,6 +1267,7 @@ class EdgeWeightedLoss(nn.Module):
 ################################################################################
 # OTHER/UTILITIES/TESTING
 ################################################################################
+# CHECK MEMORY SIZE
 def batch_cpu_profiler(data_iter,model_str):
 	from torch.profiler import profile, record_function, ProfilerActivity
 	print('='*30)
@@ -1290,11 +1291,12 @@ def batch_cuda_profiler(data_iter,model_str):
 	eval(f"model = {model_str}('999',in_channels=3,out_channels=2)")
 	X,T = next(data_iter)
 
-	with profile(activities=[
-			ProfilerActivity.CPU,
-			ProfilerActivity.CUDA
-		],profile_memory=True,record_shapes=True) as prof:
+	model = model.to(0)
+	X     = X.to(0)
+	T     = T.to(0)
 
+	with profile(activities=[ProfilerActivity.CPU,ProfilerActivity.CUDA],
+		profile_memory=True,record_shapes=True) as prof:
 		Y = model(X)
 
 	print(prof.key_averages().table())
@@ -1307,9 +1309,11 @@ def epoch_cpu_profiler(data_iter,model_str):
 def epoch_cuda_profiler(data_iter,model_str):
 	pass
 
-
-def check_pass_all(data_iter,model_str=None):
-
+# CHECK FORWARD PASS + SHAPE + NUM OF PARAMETERS
+def check_pass(data_iter,model_str=None):
+	'''
+	If model_str is None, check all models in array
+	'''
 	if model_str is None:		
 		test_these = all_models
 	else:
@@ -1317,7 +1321,7 @@ def check_pass_all(data_iter,model_str=None):
 
 	for _ in test_these: #nevermind unit testing...
 		print('='*60)
-		print(f"TESTING PASS ON {_}")
+		print(f"TESTING FWD PASS ON {_}")
 		print('='*60)		
 		net = eval(f"{_}('999',in_channels=3,out_channels=2)")
 
@@ -1329,7 +1333,7 @@ def check_pass_all(data_iter,model_str=None):
 		y = net(X)
 		print(f"Y: {y.shape} -- GOOD.")
 
-
+# NUM OF PARAMETERS PER MODULE (IN A SINGLE MODEL)
 def print_model_parameters(model_str):
 	net = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
 	P = [(p[0],p[1].numel(),p[1].shape) for p in net.named_parameters()]
@@ -1350,15 +1354,44 @@ all_models = [
 
 
 if __name__ == '__main__':
-	# TEST MODELS
 	import dload
-	data_dir = '../../chips_sorted'
-	tr_ds = dload.SentinelDataset(f'{data_dir}/training')
-	va_ds = dload.SentinelDataset(f'{data_dir}/validation')
-	tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
-	va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
-	data_iter = iter(va_dl)
+	import argparse
+	import sys
+	import os
 
-	# print_model_parameters("UNet6_1")
-	# check_pass_all(data_iter)
-	batch_cpu_profiler(data_iter,"UNet6_1")
+	parser = argparse.ArgumentParser()
+	group  = parser.add_mutually_exclusive_group()
+	parser.add_argument('--data-dir',default=None,help="Data directory")
+	group.add_argument('-p','--print',default=None,nargs=1,help="Print a model's nr parameters per module")
+	group.add_argument('-t','--check',default=None,nargs='?',help="Check batch forward pass")
+	group.add_argument('-c','--cpu-profile',default=None,nargs=1,help="CPU PyTorch profiler on a batch")
+	group.add_argument('-g','--gpu-profile',default=None,nargs=1,help="GPU PyTorch profiler on a batch")
+	args = parser.parse_args()
+
+	if args.print:
+		print_model_parameters(args.print[0])
+	else:
+		data_dir = args.data_dir
+		if data_dir is None:
+			print("No data directory given.")
+			sys.exit(1)
+		if os.path.isdir(data_dir) == False:
+			print("Incorrect data directory given.") #O.w. no error until calling next()!
+			sys.exit(1)
+
+		# tr_ds = dload.SentinelDataset(f'{data_dir}/training')
+		va_ds = dload.SentinelDataset(f'{data_dir}/validation')
+		# tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
+		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
+		data_iter = iter(va_dl)
+
+		if args.cpu_profile:
+			batch_cpu_profiler(data_iter,args.cpu_profile[0])
+		elif args.gpu_profile:
+			batch_cuda_profiler(data_iter,args.gpu_profile[0])
+		else:
+			# TEST MODELS
+			if args.check:
+				check_pass(data_iter,args.check)
+			else:
+				check_pass(data_iter)
