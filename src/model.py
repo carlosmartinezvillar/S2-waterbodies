@@ -1426,7 +1426,7 @@ if __name__ == '__main__':
 		# tr_ds = dload.SentinelDataset(f'{data_dir}/training')
 		va_ds = dload.SentinelDataset(f'{data_dir}/validation')
 		# tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
-		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=32,drop_last=False,shuffle=False)
+		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=48,drop_last=False,shuffle=False)
 		data_iter = iter(va_dl)
 
 		if args.cpu_profile:
