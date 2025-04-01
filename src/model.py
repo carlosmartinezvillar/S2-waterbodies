@@ -1304,7 +1304,7 @@ def batch_cuda_profiler(data_iter,model_str):
 	print(prof.key_averages().table())
 
 
-def batch_cuda_memory(data_iter,model_str):
+def batch_cuda_memory(data_iter,model_str,batch_size):
 	'''
 	CHECK MEMORY ALLOCATION WITH torch.cuda.mem_get_info().
 	'''
@@ -1344,14 +1344,6 @@ def batch_cuda_memory(data_iter,model_str):
 	print(f"AFTER FWD PASS:    {used_gb:.2f}/{total_gb:.2f} GB")
 
 
-def epoch_cpu_profiler(data_iter,model_str):
-	pass
-
-
-def epoch_cuda_profiler(data_iter,model_str):
-	pass
-
-
 def check_pass(data_iter,model_str=None):
 	'''
 	CHECK FORWARD PASS + SHAPE + NUM OF PARAMETERS.
@@ -1376,8 +1368,11 @@ def check_pass(data_iter,model_str=None):
 		y = net(X)
 		print(f"Y: {y.shape} -- GOOD.")
 
-# NUM OF PARAMETERS PER MODULE (IN A SINGLE MODEL)
+
 def print_model_parameters(model_str):
+	'''
+	# NUM OF PARAMETERS PER MODULE (IN A SINGLE MODEL)	
+	'''
 	net = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
 	P = [(p[0],p[1].numel(),p[1].shape) for p in net.named_parameters()]
 	P_sum = 0
@@ -1410,6 +1405,7 @@ if __name__ == '__main__':
 	group.add_argument('-c','--cpu-profile',default=None,nargs=1,help="CPU PyTorch profiler on a batch")
 	group.add_argument('-g','--gpu-profile',default=None,nargs=1,help="GPU PyTorch profiler on a batch")
 	group.add_argument('-G','--gpu-memory',default=None,nargs=1,help="GPU Memory check 1 batch")
+	parser.add_argument('-b','--batch',default=[32],nargs=1,help="Batch size")
 	args = parser.parse_args()
 
 	if args.print:
@@ -1423,10 +1419,9 @@ if __name__ == '__main__':
 			print("Incorrect data directory given.") #O.w. no error until calling next()!
 			sys.exit(1)
 
-		# tr_ds = dload.SentinelDataset(f'{data_dir}/training')
+		batch = args.batch[0]
 		va_ds = dload.SentinelDataset(f'{data_dir}/validation')
-		# tr_dl = torch.utils.data.DataLoader(tr_ds,batch_size=32,drop_last=False,shuffle=False)
-		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=48,drop_last=False,shuffle=False)
+		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=batch,drop_last=False,shuffle=False)
 		data_iter = iter(va_dl)
 
 		if args.cpu_profile:
@@ -1434,7 +1429,7 @@ if __name__ == '__main__':
 		elif args.gpu_profile:
 			batch_cuda_profiler(data_iter,args.gpu_profile[0])
 		elif args.gpu_memory:
-			batch_cuda_memory(data_iter,args.gpu_memory[0])
+			batch_cuda_memory(data_iter,args.gpu_memory[0],batch)
 		else:
 			# TEST MODELS
 			if args.check:
