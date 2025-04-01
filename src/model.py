@@ -1267,8 +1267,10 @@ class EdgeWeightedLoss(nn.Module):
 ################################################################################
 # OTHER/UTILITIES/TESTING
 ################################################################################
-# CHECK MEMORY SIZE
 def batch_cpu_profiler(data_iter,model_str):
+	'''
+	CHECK MEMORY SIZE WITH PYTORCH PROFILER
+	'''
 	from torch.profiler import profile, record_function, ProfilerActivity
 	print('='*30)
 	print(f"PROFILER (CPU) FOR {model_str}")
@@ -1302,6 +1304,45 @@ def batch_cuda_profiler(data_iter,model_str):
 	print(prof.key_averages().table())
 
 
+def batch_cuda_memory(data_iter,model_str):
+	'''
+	CHECK MEMORY ALLOCATION WITH torch.cuda.mem_get_info().
+	'''
+	print("="*60)
+	print(f"MEMORY USED (CUDA) {model_str}")
+	print("="*60)
+
+	#LOAD MODEL, GET DATA
+	model = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
+	X,T = next(data_iter)
+
+	# good  = '\n'.join([table_arr[0],table_arr[1],table_arr[4],
+		# table_arr[5],table_arr[6],table_arr[7],table_arr[-2]])		
+	free,total = torch.cuda.mem_get_info(0)
+	total_gb = total/1024**3
+	used_gb  = (total-free)/1024**3
+	print(f"BEFORE:            {used_gb:.2f}/{total_gb:.2f} GB")
+
+	#MODEL TO DEVICE
+	model = model.to(0)
+	free,total = torch.cuda.mem_get_info(0)
+	used_gb  = (total-free)/1024**3
+	print(f"MODEL ALONE:       {used_gb:.2f}/{total_gb:.2f} GB")
+
+	#TENSOR TO DEVICE
+	X     = X.to(0)
+	T     = T.to(0)
+	free,total = torch.cuda.mem_get_info(0)
+	used_gb  = (total-free)/1024**3
+	print(f"MODEL AND TENSORS: {used_gb:.2f}/{total_gb:.2f} GB")
+
+	# FORWARD PASS
+	Y     = model(X)
+	free,total = torch.cuda.mem_get_info(0)
+	used_gb  = (total-free)/1024**3
+	print(f"AFTER FWD PASS:    {used_gb:.2f}/{total_gb:.2f} GB")
+
+
 def epoch_cpu_profiler(data_iter,model_str):
 	pass
 
@@ -1309,9 +1350,10 @@ def epoch_cpu_profiler(data_iter,model_str):
 def epoch_cuda_profiler(data_iter,model_str):
 	pass
 
-# CHECK FORWARD PASS + SHAPE + NUM OF PARAMETERS
+
 def check_pass(data_iter,model_str=None):
 	'''
+	CHECK FORWARD PASS + SHAPE + NUM OF PARAMETERS.
 	If model_str is None, check all models in array
 	'''
 	if model_str is None:		
@@ -1366,6 +1408,7 @@ if __name__ == '__main__':
 	group.add_argument('-t','--check',default=None,nargs='?',help="Check batch forward pass")
 	group.add_argument('-c','--cpu-profile',default=None,nargs=1,help="CPU PyTorch profiler on a batch")
 	group.add_argument('-g','--gpu-profile',default=None,nargs=1,help="GPU PyTorch profiler on a batch")
+	group.add_argument('-G','--gpu-memory',default=None,nargs=1,help="GPU Memory check 1 batch")
 	args = parser.parse_args()
 
 	if args.print:
@@ -1389,6 +1432,8 @@ if __name__ == '__main__':
 			batch_cpu_profiler(data_iter,args.cpu_profile[0])
 		elif args.gpu_profile:
 			batch_cuda_profiler(data_iter,args.gpu_profile[0])
+		elif args.gpu_memory:
+			batch_cuda_memory(data_iter,args.gpu_memory[0])
 		else:
 			# TEST MODELS
 			if args.check:
