@@ -1288,7 +1288,7 @@ def batch_cuda_profiler(data_iter,model_str):
 	print('='*30)
 	print(f"PROFILER (CUDA) FOR {model_str}")
 	print('='*30)		
-	eval(f"model = {model_str}('999',in_channels=3,out_channels=2)")
+	model = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
 	X,T = next(data_iter)
 
 	model = model.to(0)
