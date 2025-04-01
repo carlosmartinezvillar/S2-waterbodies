@@ -254,16 +254,10 @@ if __name__ == "__main__":
 		input_bands = 4
 
 	#---------- DATALOADERS ----------
-	# tr_idx,va_idx,te_idx = dload.sentinel_split_indices()
-	# dataset              = dload.SentinelDataset(DATA_DIR)
-	# tr_dataset = torch.utils.data.Subset(dataset,tr_idx)
-	# va_dataset = torch.utils.data.Subset(dataset,va_idx)
-
 	transform = v2.Compose([
 		v2.RandomHorizontalFlip(p=0.5),
 		v2.RandomVerticalFlip(p=0.5)
 	])
-
 	tr_ds = dload.SentinelDataset(f"{DATA_DIR}/training",
 		n_bands=input_bands,
 		n_labels=2,
@@ -272,7 +266,6 @@ if __name__ == "__main__":
 		n_bands=input_bands,
 		n_labels=2,
 		transform=None)
-
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_ds,
 			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=8,pin_memory=True)
