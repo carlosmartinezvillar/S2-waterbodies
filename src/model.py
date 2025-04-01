@@ -1315,6 +1315,7 @@ def batch_cuda_memory(data_iter,model_str):
 	#LOAD MODEL, GET DATA
 	model = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
 	X,T = next(data_iter)
+	print(f"BATCH: {X.shape[0]}")
 
 	# good  = '\n'.join([table_arr[0],table_arr[1],table_arr[4],
 		# table_arr[5],table_arr[6],table_arr[7],table_arr[-2]])		
