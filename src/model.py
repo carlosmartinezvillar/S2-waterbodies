@@ -1419,7 +1419,7 @@ if __name__ == '__main__':
 			print("Incorrect data directory given.") #O.w. no error until calling next()!
 			sys.exit(1)
 
-		batch = args.batch[0]
+		batch = int(args.batch[0])
 		va_ds = dload.SentinelDataset(f'{data_dir}/validation')
 		va_dl = torch.utils.data.DataLoader(va_ds,batch_size=batch,drop_last=False,shuffle=False)
 		data_iter = iter(va_dl)
