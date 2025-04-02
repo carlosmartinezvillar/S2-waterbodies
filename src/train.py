@@ -183,9 +183,6 @@ if __name__ == "__main__":
 
 	#---------- GPU (IF SET) ----------
 	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
-	# assert torch.cuda.device_count() > 0, "number of CUDA devices is zero."
-	# assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
-	
 	if torch.cuda.is_available():
 		assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
 		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
@@ -196,22 +193,18 @@ if __name__ == "__main__":
 
 
 	#---------- LOAD AND PARSE HP DICT ----------
-	#some checks
 	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
-		lines = fp.readlines()
-		HP_LIST = [json.loads(l) for l in lines]
+		HP_LIST = [json.loads(line) for line in fp.readlines()]
 	assert len(HP_LIST) > 0, "GOT EMPTY JSON FILE."
 	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
-
-	#load dictionary
-	HP = HP_LIST[args.row]
+	HP = HP_LIST[args.row] # load dictionary
 
 	#---------- MODEL ----------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["attn","unet"], "INCORRECT MODEL STRING."
 	if model_str == 'unet':
-		exec(f"net = model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
+		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
 	if model_str == 'attn':
 		pass
 	# ---> TO GPU
@@ -258,17 +251,20 @@ if __name__ == "__main__":
 		v2.RandomHorizontalFlip(p=0.5),
 		v2.RandomVerticalFlip(p=0.5)
 	])
+
 	tr_ds = dload.SentinelDataset(f"{DATA_DIR}/training",
 		n_bands=input_bands,
 		n_labels=2,
 		transform=transform)
+
 	va_ds = dload.SentinelDataset(f"{DATA_DIR}/validation",
 		n_bands=input_bands,
 		n_labels=2,
 		transform=None)
+
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_ds,
-			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=8,pin_memory=True)
+			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=8,pin_memory=True),
 		'validation': torch.utils.data.DataLoader(va_ds,
 			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=8,pin_memory=True)
 	}

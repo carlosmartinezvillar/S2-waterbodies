@@ -1242,12 +1242,14 @@ class SegFormer_0(nn.Module):
 	def forward(self,x):
 		return x
 
+
 class AerialFormer_0(nn.Module):
 	def __init__(self,model_id,in_channels=3,out_channels=2):
 		super().__init__()
 
 	def forward(self,x):
 		pass
+
 
 ################################################################################
 # LOSSES
