@@ -714,7 +714,7 @@ class UNet3_1(nn.Module):
 
 		# ENCODER -- needs an embedding conv to join block input to output
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=2,padding=1)
+		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=1,padding=1)
 		self.encoder_1 = ConvBlock3(32,32)
 		self.encoder_2 = ConvBlock3(64,64)
 		self.encoder_3 = ConvBlock3(128,128)
