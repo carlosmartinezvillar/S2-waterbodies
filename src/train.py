@@ -100,7 +100,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			# METRICS
 			tr_loss_sum += loss.item() * X.size(0)
 			samples_ran += X.size(0)			
-			Y = output.detach().cpu().numpy().max(axis=1)
+			Y = output.detach().cpu().numpy().argmax(axis=1)
 			T = T.detach().cpu().numpy()
 			M_tr.update(Y,T)
 			tr_batch_loss.append(loss.item())
