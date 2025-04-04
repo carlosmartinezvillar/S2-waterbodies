@@ -14,15 +14,15 @@ spec:
 
           resources:
             limits:
-              memory: 16Gi
+              memory: 16G
               cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: 20Gi 
+              ephemeral-storage: 20G
             requests:
-              memory: 16Gi
+              memory: 16G
               cpu: 8
               nvidia.com/gpu: 1
-              ephemeral-storage: 20Gi
+              ephemeral-storage: 20G
 
           volumeMounts:
             - mountPath: /cache
@@ -55,7 +55,7 @@ spec:
       volumes:
       - name: cache-vol
         emptyDir:
-          sizeLimit: 20Gi
+          sizeLimit: 20G
           # medium: Memory
 
       - name: zipped-vol
@@ -73,7 +73,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 24Gi
+          sizeLimit: 12G
 
       restartPolicy: Never
 
