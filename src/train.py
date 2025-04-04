@@ -246,6 +246,8 @@ if __name__ == "__main__":
 	if HP['BANDS'] == 'vnir':
 		input_bands = 4
 
+	#---------- OUTPUT CHANNELS ---------- <<<<< TODO
+
 	#---------- DATALOADERS ----------
 	transform = v2.Compose([
 		v2.RandomHorizontalFlip(p=0.5),
