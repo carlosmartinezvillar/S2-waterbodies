@@ -73,53 +73,61 @@ def find_best_epoch(log_path,metric='v_iou'):
 	with open(log_path,'r') as fp:
 		header = fp.readline().rstrip('\n').split('\t')
 		lines  = [_.rstrip('\n').split('\t') for _ in list(fp)]
-		array  = np.array(lines).astype(float)
 
+	if len(lines) == 0:
+		return 0
+
+	array  = np.array(lines).astype(float)
 	# best_epoch     = array[:,header.index(metric)].argmax()
 	best_epoch_val = array[:,header.index(metric)].max()
 	return best_epoch_val
 
 
-def find_best_performer(log_dir,hp_file,metric='v_iou'):
+def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 	'''
 	Iterate thru logs and find the best model by IoU.
 	'''
 	assert metric in ['v_iou','v_ppv','v_tpr'], "Incorrect metric in evals.find_best_performer()"
 
-	files = glob("epoch_log_*.tsv",root_dir=log_dir)
+	files = sorted(glob("epoch_log_*.tsv",root_dir=log_dir))
 	if log_dir[-1] == '/':
 		log_dir = log_dir.rstrip('/')
 
 	model_ids = [_.split('_')[-1].rstrip('.tsv') for _ in files]
+	model_max = [find_best_epoch(f"{log_dir}/{_}",metric) for _ in files]
 
-	model_val = []
-	for file in files:
-		log_path = f"{log_dir}/{file}"
-		model_val.append(find_best_epoch(log_path,metric))
+	assert os.path.isfile(hp_file), f"No {hp_file} found."
+	with open(hp_file,'r') as fp:
+		HP_LIST = [json.loads(line) for line in fp.readlines()]
 
-	assert os.path.isfile(f"../hpo/{hp_file}"), f"No {hp_file} found."
-	with open(f"../hpo/{hp_file}",'r') as fp:
-		HP_LIST = json.load(fp)
-	hp_models = [row['MODEL'] for row in HP_LIST]
-	hp_ids    = [row['ID'] for row in HP_LIST]
+	indexed = {}
+	for row in HP_LIST:
+		indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
+	
+	pass
+	
+	# hp_models = [row['MODEL'] for row in HP_LIST]
+	# hp_ids    = [row['ID'] for row in HP_LIST]
+	# matched_names = [hp_models[hp_ids.index(int(i))] for i in model_ids]
+	# idx = np.argmax(model_val)
+	# print(f"BEST PERFOMER: {matched_names[idx]} | {metric}: {model_max[idx]}")
+	# sorted_idx = np.argsort(matched_names)
+	# x = np.array(matched_names)[sorted_idx]
+	# y = np.array(model_max)[sorted_idx]
+	
+	# names = [indexed[i]['MODEL'] for i in model_ids]
+	# x = [f"{model_ids[i]} ({n})" for i,n in enumerate(names)]
+	x = model_ids
+	y = model_max
 
-	matched_names = [hp_models[hp_ids.index(int(i))] for i in model_ids]
-
-	idx = np.argmax(model_val)
-	print(f"BEST PERFOMER: {matched_names[idx]} | {metric}: {model_val[idx]}")
-
-	sorted_idx = np.argsort(matched_names)
-	x = np.array(matched_names)[sorted_idx]
-	y = np.array(model_val)[sorted_idx]
-
-	plt.figure(figsize=(10,8))
-	plt.plot(x,y,linestyle='-',color='C0')
+	plt.figure(figsize=(30,15))
+	plt.plot(x,y,linestyle='-',color='C1',linewidth=0.75)
 	plt.title('Performance by Model')
 	plt.xlabel('model')
 	plt.ylabel(metric)
-	plt.xticks(matched_names,rotation=45)
+	plt.xticks(x,rotation=90)
 	plt.grid(True)
-	plt.savefig(f"{log_dir}/model_metric.png")
+	plt.savefig(f"{out_dir}/model_metric.png")
 	plt.close()
 
 
@@ -170,6 +178,25 @@ def plot_all_batch_log(log_dir,out_dir):
 
 
 if __name__ == '__main__':
-	# find_best_performer('../../lake_logs','params.json')
+
+	params = '../hpo/params.json'
+
+	parser = argparse.ArgumentParser(description="Plot and summarize train logs.")
+	parser.add_argument('--logs',default=None,help="Dir to read the logs from")
+	parser.add_argument('--out-dir',default=None,help="Dir to save plots")
+	parser.add_argument('--batch',default=[],nargs=1)
+	parser.add_argument('--epoch',default=False,action='store_true')
+	parser.add_argument('--best',default=False,action='store_true')
+	args = parser.parse_args()
+
+	assert os.path.isdir(args.logs),f"No path found for {args.logs}"
+	assert os.path.isdir(args.out_dir),f"No output directory found in {args.out_dir}"
+
+	if args.best is True:
+		find_best_performer(args.logs,args.out_dir,params)
+
+	if len(args.batch) == 1:
+		plot_batch_log(args.logs,args.out_dir)
+
 	# plot_all_training_log('../../lake_logs','../../lake_logs')
-	plot_batch_log('../../lake_logs/train_batch_log_005.tsv','../../lake_logs')
+	# plot_batch_log('../../lake_logs/train_batch_log_005.tsv','../../lake_logs')
