@@ -23,17 +23,21 @@ parser = argparse.ArgumentParser()
 required = parser.add_argument_group('required arguments')
 optional = parser.add_argument_group('optional arguments')
 required.add_argument('--data-dir',required=True,
-	help='Dataset directory.')
+	help='Input dataset directory.')
 required.add_argument('--net-dir',required=True,
-	help='Directory to store the trained models/weights.')
+	help='Final trained models/weights directory.')
 required.add_argument('--log-dir',required=True,default='../log',
-	help="Directory to store training logs.")
-required.add_argument('--params',required=True,default='../hpo/parameters.json',
-	help='Path to file listing hyperparameters.')
+	help='Final training logs directory.')
+required.add_argument('-p''--params',required=True,default='../hpo/parameters.json',
+	help='Path to hyperparameters file.')
 required.add_argument('--row',required=True,type=int,default=0,
-	help='Row number in the given file for hyperparameters.')
-optional.add_argument('--gpu',required=False,type=int,default=0)
-optional.add_argument('--multi-gpu',required=False,action='store_true',default=False)
+	help='Row number in hyperparameter file.')
+optional.add_argument('--gpu',required=False,type=int,default=0,
+	help='GPU to train in. Useful for training locally.')
+optional.add_argument('--multi-gpu',required=False,action='store_true',default=False,
+	help='Use multiple GPUs to train.')
+optional.add_argument('--full',required=False,action='store_true',default=False,
+	help='Train on both training and validation sets (training final model).')
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -54,6 +58,99 @@ def total_time_decorator(orig_func):
 ####################################################################################################
 # TRAININING+VALIDATION
 ####################################################################################################
+def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=100)
+	'''
+	Train the model with the full set (train+validation combined).
+	'''
+	N_tr = len(dataloaders['training'].dataset) #nr of samples
+	N_va = len(dataloaders['validation'].dataset)
+	B_tr = len(dataloaders['training']) #nr of batches
+	B_va = len(dataloaders['validation'])
+	best_iou   = 0.0
+	best_epoch = 0
+	loss_sum = 0.0
+
+
+	#ENABLE GRAD
+	model.train()	
+	torch.set.set_grad_enabled(True)
+
+
+	for epoch in range(n_epochs):
+		batch_loss = []
+		M = utils.ConfusionMatrix(n_classes=2)
+		t = tqdm(total=B_tr+B_va,ncols=80,ascii=True)
+		epoch_start_time = time.time()
+		print(f'\nEpoch {epoch}/{n_epochs-1}')
+		print('-'*80)		
+
+		samples  = 0
+
+		for X,T in dataloaders['training']:
+			X.to(CUDA_DEV,non_blocking=True)
+			T.to(CUDA_DEV,non_blocking=True)
+
+			output = model(X)
+			loss   = loss_fn(output,T)
+
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+
+			loss_sum += loss.item() * X.size(0)
+			samples  += X.size(0)
+			Y = output.detach().cpu().numpy().argmax(axis=1)
+			T = T.detach().cpu().numpy()
+			M.update(Y,T)
+			batch_loss.append(loss.item())
+
+			t.set_postfix(loss='{:05.5f}'.format(loss_sum/samples))
+			t.update(1)
+
+		for X,T in dataloaders['validation']:
+			X.to(CUDA_DEV,non_blocking=True)
+			T.to(CUDA_DEV,non_blocking=True)
+
+			output = model(X)
+			loss   = loss_fn(output,T)
+
+			optimizer.zero_grad()
+			loss.backward()
+			optimizer.step()
+
+			loss_sum += loss.item() * X.size(0)
+			samples  += X.size(0)
+			Y = output.detach().cpu().numpy().argmax(axis=1)
+			T = T.detach().cpu().numpy()
+			M.update(Y,T)
+			batch_loss.append(loss.item())
+
+
+			t.set_postfix(loss='{:05.5f}'.format(loss_sum/samples))
+			t.update(1)
+
+		t.close()
+
+		if scheduler is not None:
+			scheduler.step()
+
+		loss_total = loss_sum / (N_tr+N_va)
+		print(f'[T] loss: {loss_total:.5f} | acc: {M.acc():.5f} | iou: {M.iou():.5f}')
+
+		epoch_time = time.time() - epoch_start_time
+		print(f'\nEpoch time: {epoch_time:.2f}s')
+		# epoch_result = [loss_tr,M_tr.acc(),loss_va,M_va.acc(),M_va.tpr(),M_va.ppv(),M_va.iou()]
+		# epoch_logger.log(epoch_result)
+
+		# SAVE MODEL
+		epoch_iou = M.iou()
+		if best_iou < epoch_iou:
+			best_iou = epoch_iou
+			best_epoch = epoch
+			# utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
+
+		print(f'Best validation IoU: {best_iou:.4f}')
+
 @total_time_decorator
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
 
@@ -106,7 +203,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			tr_batch_loss.append(loss.item())
 
 			# update bar
-			t.set_postfix(loss='{:05.4f}'.format(tr_loss_sum/samples_ran))
+			t.set_postfix(loss='{:05.5f}'.format(tr_loss_sum/samples_ran))
 			t.update(1)
 		t.close()
 
@@ -143,7 +240,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
 			va_batch_loss.append(loss.item())
 
-			t.set_postfix(loss='{:05.4f}'.format(va_loss_sum/samples_ran))
+			t.set_postfix(loss='{:05.5f}'.format(va_loss_sum/samples_ran))
 			t.update(1)
 		t.close()
 
@@ -272,5 +369,6 @@ if __name__ == "__main__":
 	}
 
 	#---------- RUN ----------
-	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,n_epochs=100)
+	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,HP['EPOCHS'])
+
 

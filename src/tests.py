@@ -2,6 +2,14 @@ import os
 import numpy as np
 import torch
 import argparse
+import utils
+import argparse
+
+def parse_args():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--data-dir',required=True,help='Dataset directory.')
+	parser.add_argument('--model',required=True,help='Checkpoint to use.')
+
 
 def test(model,dataloader):
 
@@ -20,7 +28,17 @@ def test(model,dataloader):
 if __name__ == '__main__':
 	pass
 	#PARSE ARGS
+	#--------------------	
+	args = parse_args()
+
 
 	#LOAD MODEL
+	#--------------------
+	indexed = {}
+	for row in HP_LIST:
+		indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
+
+	
 
 	#LOAD WEIGHTS
+	#--------------------

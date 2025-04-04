@@ -15,7 +15,7 @@ parser.add_argument('--clear',required=False,action='store_true',help='Delete jo
 args = parser.parse_args()
 
 #launch via kubectl
-def launch_jobs(template_path,start,end,hp_list):
+def launch_jobs(template_path,hp_list,start,end):
 	'''
 	Opens a template YAML for the job. For each number in the range of [start,end) launches a
 	kubernetes job. Each job is named to match the model id listed in the hyperparameter json
@@ -30,30 +30,30 @@ def launch_jobs(template_path,start,end,hp_list):
 	old_job_str = obj['metadata']['name']
 	old_cmd_str = obj['spec']['template']['spec']['containers'][0]['args'][0]
 
-	for row in range(start,end):
+	for row in range(start-1,end):
 
-		#Set the new strings for this row
+		#SET THE NEW STRINGS FOR THIS ROW
 		model_id = hp_list[row]['ID'] #GET ID in json row
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
 		new_cmd_str = old_cmd_str.replace('--row 0;',f'--row {row};')
 
-		#assign new strings to object
+		#ASSIGN NEW STRINGS TO OBJECT
 		obj['metadata']['name'] = new_job_str
 		obj['spec']['template']['spec']['containers'][0]['args'][0] = new_cmd_str
 
-		#create a temp file to pass to the kubernetes command
-		with open('../cfg/temp.yml','w+') as fp_temp:
+		#CREATE TEMP FILE TO PASS IN KUBERNETES CLI CALL
+		with open('cfg/temp.yml','w+') as fp_temp:
 			yaml.dump(obj,fp_temp)
 
 		#run
-		out = sp.run("kubectl create -f ../cfg/temp.yml",capture_output=True,text=True,shell=True)
+		out = sp.run("kubectl create -f cfg/temp.yml",capture_output=True,text=True,shell=True)
 		if out.returncode != 0:
 			print(f"ERROR launching job for model listed in row {row}")
 			print(out.stderr)
 		print(f"STDOUT:{out.stdout}")
 
 	#clear temp file
-	os.remove('../cfg/temp.yml')
+	os.remove('cfg/temp.yml')
 
 
 def clear_jobs(start,end):
@@ -104,6 +104,7 @@ if __name__ == '__main__':
 
 	#CHECK START+END ARGS
 	assert args.start is not None, "(kjobs.py): GOT NONE FOR START ROW"
+	assert args.start >= 1, "(kjobs.py): GOT INDEX <1"
 	assert args.end is not None, "(kjobs.py): GOT NONE FOR END ROW"
 	assert args.end <= N, "(kjobs.py): END INDEX OUT OF RANGE"
 	assert args.end > args.start, "(kjobs.py): END ROW > START ROW"
@@ -113,8 +114,8 @@ if __name__ == '__main__':
 	if args.end < N:
 		end_index = args.end
 	else:
-		end_index = N #for range(start,end) which already n-1
+		end_index = N #for range(start,end) one-indexed now.
 
 
 	#RUN
-	launch_jobs(args.spec,start_index,end_index,HP_LIST)
+	launch_jobs(args.spec,HP_LIST,start_index,end_index)
