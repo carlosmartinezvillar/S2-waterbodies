@@ -297,11 +297,18 @@ if __name__ == "__main__":
 	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
 	HP = HP_LIST[args.row] # load dictionary
 
+	#---------- INPUT BANDS ----------
+	assert HP['BANDS'] in ['rgb','vnir'],"INCORRECT BANDS IN JSON HP FILE."
+	if HP['BANDS'] == 'rgb':
+		input_bands = 3
+	if HP['BANDS'] == 'vnir':
+		input_bands = 4
+
 	#---------- MODEL ----------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["attn","unet"], "INCORRECT MODEL STRING."
 	if model_str == 'unet':
-		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']})")
+		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={input_bands})")
 	if model_str == 'attn':
 		pass
 	# ---> TO GPU
@@ -336,12 +343,6 @@ if __name__ == "__main__":
 	if HP['SEED'] == True:
 		utils.set_seed(476)	
 
-	#---------- INPUT BANDS ----------
-	assert HP['BANDS'] in ['rgb','vnir'],"INCORRECT BANDS IN JSON HP FILE."
-	if HP['BANDS'] == 'rgb':
-		input_bands = 3
-	if HP['BANDS'] == 'vnir':
-		input_bands = 4
 
 	#---------- OUTPUT CHANNELS ---------- <<<<< TODO
 
