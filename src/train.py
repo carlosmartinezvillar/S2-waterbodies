@@ -363,9 +363,9 @@ if __name__ == "__main__":
 
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_ds,
-			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=16,pin_memory=True),
+			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=8,pin_memory=True),
 		'validation': torch.utils.data.DataLoader(va_ds,
-			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=16,pin_memory=True)
+			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=8,pin_memory=True)
 	}
 
 	#---------- RUN ----------
