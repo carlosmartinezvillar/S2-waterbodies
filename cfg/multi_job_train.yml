@@ -1,0 +1,95 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train-job-0
+spec:
+
+  template:
+    spec:
+
+      containers:
+        - name: train-box
+          image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
+          imagePullPolicy: IfNotPresent
+
+          resources:
+            limits:
+              memory: 16G
+              cpu: 16
+              nvidia.com/gpu: 2
+              ephemeral-storage: 20G
+            requests:
+              memory: 16G
+              cpu: 16
+              nvidia.com/gpu: 2
+              ephemeral-storage: 20G
+
+          volumeMounts:
+            - mountPath: /cache
+              name: cache-vol
+
+            - mountPath: /chips_pvc
+              name: zipped-vol
+
+            - mountPath: /log_pvc
+              name: log-vol
+
+            - mountPath: /model_pvc
+              name: model-vol
+
+            - mountPath: /dev/shm
+              name: dshm              
+
+          command: ["/bin/sh","-c"]
+          args:
+          - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
+            cp chips_pvc/chips_sorted.zip cache/;
+            unzip -q cache/chips_sorted.zip -d cache/;
+            mkdir /cache/model;
+            mkdir /cache/logs;
+            cd S2-waterbodies/src;
+            python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
+            cp /cache/model/*.pth.tar /model_pvc;
+            cp /cache/logs/*.tsv /log_pvc;
+
+      volumes:
+      - name: cache-vol
+        emptyDir:
+          sizeLimit: 20G
+          # medium: Memory
+
+      - name: zipped-vol
+        persistentVolumeClaim:
+          claimName: lake-chips-sorted
+
+      - name: log-vol
+        persistentVolumeClaim:
+          claimName: lake-training-logs
+
+      - name: model-vol
+        persistentVolumeClaim:
+          claimName: lake-weights
+
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 8G
+
+      restartPolicy: Never
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: topology.kubernetes.io/region
+                  operator: In
+                  values:
+                  - us-central  
+                - key: nvidia.com/gpu.product
+                  operator: In
+                  values:
+                  # - NVIDIA-GeForce-RTX-3090
+                  - Tesla-V100-PCIE-16GB
+
+  backoffLimit: 1
