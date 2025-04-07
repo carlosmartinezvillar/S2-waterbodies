@@ -278,7 +278,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 
 if __name__ == "__main__":
 
-	#---------- GPU (IF SET) ----------
+	#---------- GPU (IF SET) --------------------
 	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
 	if torch.cuda.is_available():
 		assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
@@ -286,7 +286,7 @@ if __name__ == "__main__":
 	else:
 		CUDA_DEV = torch.device("cpu")
 
-	#---------- MULTI-GPU (IF SET) ---------- <---------- TODO!
+	#---------- MULTI-GPU (IF SET) -------------- <---------- TODO!
 
 
 	#---------- LOAD AND PARSE HP DICT ----------
@@ -297,14 +297,16 @@ if __name__ == "__main__":
 	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
 	HP = HP_LIST[args.row] # load dictionary
 
-	#---------- INPUT BANDS ----------
+	#---------- INPUT BANDS ---------------------
 	assert HP['BANDS'] in ['rgb','vnir'],"INCORRECT BANDS IN JSON HP FILE."
 	if HP['BANDS'] == 'rgb':
 		input_bands = 3
 	if HP['BANDS'] == 'vnir':
 		input_bands = 4
 
-	#---------- MODEL ----------
+	#---------- OUTPUT CHANNELS -----------------
+
+	#---------- MODEL ---------------------------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["attn","unet"], "INCORRECT MODEL STRING."
 	if model_str == 'unet':
@@ -314,7 +316,7 @@ if __name__ == "__main__":
 	# ---> TO GPU
 	net = net.to(CUDA_DEV) #checked above
 
-	#---------- LOSS ----------
+	#---------- LOSS ----------------------------
 	assert HP['LOSS'] in ["ce","ew","cw"], "INCORRECT STRING FOR LOSS IN DICT."
 	if HP['LOSS'] == "ce":
 		loss_fn = torch.nn.CrossEntropyLoss()
@@ -323,7 +325,7 @@ if __name__ == "__main__":
 	if HP['LOSS'] == "cw": #<<< --- Needs some work...
 		loss_fn = None
 
-	#---------- OPTIMIZER ----------
+	#---------- OPTIMIZER -----------------------
 	assert HP["OPTIM"] in ["adam","lamb"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
@@ -338,15 +340,12 @@ if __name__ == "__main__":
 	else:
 		scheduler = None	
 
-	#---------- SET ALL SEEDS ----------
+	#---------- SET ALL SEEDS --------------------
 	assert HP['SEED'] in (0,1), "INCORRECT SEED IN JSON PARAMETER DICT."
 	if HP['SEED'] == True:
 		utils.set_seed(476)	
 
-
-	#---------- OUTPUT CHANNELS ---------- <<<<< TODO
-
-	#---------- DATALOADERS ----------
+	#---------- DATALOADERS ----------------------
 	transform = v2.Compose([
 		v2.RandomHorizontalFlip(p=0.5),
 		v2.RandomVerticalFlip(p=0.5)
@@ -364,12 +363,12 @@ if __name__ == "__main__":
 
 	dataloaders = {
 		'training': torch.utils.data.DataLoader(tr_ds,
-			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=8,pin_memory=True),
+			batch_size=HP['BATCH'],drop_last=False,shuffle=True,num_workers=12,pin_memory=True),
 		'validation': torch.utils.data.DataLoader(va_ds,
-			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=8,pin_memory=True)
+			batch_size=HP['BATCH'],drop_last=False,shuffle=False,num_workers=12,pin_memory=True)
 	}
 
-	#---------- RUN ----------
+	#---------- RUN -----------------------------
 	train_and_validate(net,dataloaders,optimizer,loss_fn,scheduler,HP['EPOCHS'])
 
 

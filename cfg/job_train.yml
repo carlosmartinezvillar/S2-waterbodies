@@ -14,13 +14,13 @@ spec:
 
           resources:
             limits:
-              memory: 16G
-              cpu: 8
+              memory: 10G
+              cpu: 12
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
             requests:
-              memory: 16G
-              cpu: 8
+              memory: 10G
+              cpu: 12
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
 
@@ -73,7 +73,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 12G
+          sizeLimit: 16G
 
       restartPolicy: Never
 
@@ -82,13 +82,14 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                # - key: topology.kubernetes.io/region
-                #   operator: In
-                #   values:
-                #   - us-central  
+                - key: topology.kubernetes.io/region
+                  operator: In
+                  values:
+                  - us-central  
                 - key: nvidia.com/gpu.product
                   operator: In
                   values:
-                  - NVIDIA-GeForce-RTX-3090
+                  # - NVIDIA-GeForce-RTX-3090
+                  - Tesla-V100-PCIE-16GB
 
   backoffLimit: 1
