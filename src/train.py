@@ -58,7 +58,7 @@ def total_time_decorator(orig_func):
 ####################################################################################################
 # TRAININING+VALIDATION
 ####################################################################################################
-def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=100)
+def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=100):
 	'''
 	Train the model with the full set (train+validation combined).
 	'''

@@ -107,7 +107,7 @@ if __name__ == '__main__':
 	assert args.start >= 1, "(kjobs.py): GOT INDEX <1"
 	assert args.end is not None, "(kjobs.py): GOT NONE FOR END ROW"
 	assert args.end <= N, "(kjobs.py): END INDEX OUT OF RANGE"
-	assert args.end > args.start, "(kjobs.py): END ROW > START ROW"
+	assert args.end >= args.start, "(kjobs.py): END ROW < START ROW"
 
 	#SET
 	start_index = args.start
