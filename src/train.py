@@ -28,7 +28,7 @@ required.add_argument('--net-dir',required=True,
 	help='Final trained models/weights directory.')
 required.add_argument('--log-dir',required=True,default='../log',
 	help='Final training logs directory.')
-required.add_argument('-p''--params',required=True,default='../hpo/parameters.json',
+required.add_argument('-p','--params',required=True,default='../hpo/parameters.json',
 	help='Path to hyperparameters file.')
 required.add_argument('--row',required=True,type=int,default=0,
 	help='Row number in hyperparameter file.')
