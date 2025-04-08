@@ -8,20 +8,20 @@ spec:
     spec:
 
       containers:
-        - name: train-box
+        - name: train-box-0
           image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
           imagePullPolicy: IfNotPresent
 
           resources:
             limits:
               memory: 16G
-              cpu: 16
-              nvidia.com/gpu: 2
+              cpu: 8
+              nvidia.com/gpu: 1
               ephemeral-storage: 20G
             requests:
-              memory: 16G
-              cpu: 16
-              nvidia.com/gpu: 2
+              memory: 8G
+              cpu: 4
+              nvidia.com/gpu: 1
               ephemeral-storage: 20G
 
           volumeMounts:
@@ -51,6 +51,34 @@ spec:
             python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
             cp /cache/logs/*.tsv /log_pvc;
+
+        - name: train-box-1
+          image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
+          imagePullPolicy: IfNotPresent
+
+          resources:
+            limits:
+              memory: 16G
+              cpu: 8
+              nvidia.com/gpu: 1
+              ephemeral-storage: 20G
+            requests:
+              memory: 8G
+              cpu: 4
+              nvidia.com/gpu: 1
+              ephemeral-storage: 20G
+
+          volumeMounts:
+            - mountPath: /cache
+              name: cache-vol
+
+            - mountPath: /dev/shm
+              name: dshm              
+
+          command: ["/bin/sh","-c"]
+          args:
+          - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
+            python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
 
       volumes:
       - name: cache-vol
