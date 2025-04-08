@@ -367,17 +367,17 @@ if __name__ == "__main__":
 			batch_size=HP['BATCH'],
 			drop_last=False,
 			shuffle=True,
-			num_workers=16,
+			num_workers=8,
 			pin_memory=True,
-			prefetch_factor=4),
+			prefetch_factor=1),
 		'validation': torch.utils.data.DataLoader(
 			va_ds,
 			batch_size=HP['BATCH'],
 			drop_last=False,
 			shuffle=False,
-			num_workers=16,
+			num_workers=8,
 			pin_memory=True,
-			prefetch_factor=4)
+			prefetch_factor=1)
 	}
 
 	#---------- RUN -----------------------------

@@ -15,12 +15,12 @@ spec:
           resources:
             limits:
               memory: 10G
-              cpu: 12
+              cpu: 8
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
             requests:
               memory: 10G
-              cpu: 12
+              cpu: 8
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
 
@@ -73,7 +73,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 16G
+          sizeLimit: 8G
 
       restartPolicy: Never
 
