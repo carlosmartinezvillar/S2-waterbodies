@@ -14,13 +14,13 @@ spec:
 
           resources:
             limits:
-              memory: 10G
+              memory: 16G
               cpu: 8
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
             requests:
-              memory: 10G
-              cpu: 8
+              memory: 8G
+              cpu: 4
               nvidia.com/gpu: 1
               ephemeral-storage: 20G
 
@@ -73,7 +73,7 @@ spec:
       - name: dshm
         emptyDir:
           medium: Memory
-          sizeLimit: 8G
+          # sizeLimit: 8G
 
       restartPolicy: Never
 
@@ -92,4 +92,4 @@ spec:
                   # - NVIDIA-GeForce-RTX-3090
                   - Tesla-V100-PCIE-16GB
 
-  backoffLimit: 1
+  backoffLimit: 0
