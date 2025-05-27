@@ -61,6 +61,7 @@ spec:
       - name: zipped-vol
         persistentVolumeClaim:
           claimName: lake-chips-sorted
+          # claimName: lake-chips-sorted-512
 
       - name: log-vol
         persistentVolumeClaim:
@@ -90,6 +91,7 @@ spec:
                   operator: In
                   values:
                   # - NVIDIA-GeForce-RTX-3090
+                  # - NVIDIA-A100-SXM4-80GB
                   - Tesla-V100-PCIE-16GB
 
   backoffLimit: 0

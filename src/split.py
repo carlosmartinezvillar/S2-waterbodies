@@ -23,7 +23,7 @@ parser.add_argument('--data-dir',default=None,required=True,
 	help='Dataset directory.')
 
 DEFAULT_SEED = 476
-NR_TILES = 3 #nr for validation and training, respectively
+NR_TILES = 3 #nr for validation and testing
 
 def build_tree(chip_names):
 	'''
@@ -63,7 +63,7 @@ if __name__ == '__main__': #THIS IS ALL EASIER WITH A TREE?
 	args = parser.parse_args()
 	assert os.path.isdir(args.data_dir), "split.py: Incorrect data dir argument."
 
-	#FIX SEED
+	#FIX SEEDS
 	np.random.seed(DEFAULT_SEED)
 	random.seed(DEFAULT_SEED)
 
