@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class EmbeddingLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(EmbeddingLayer,self).__init__()
-		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=False)
+		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=True)
 
 	def forward(self,x):
 		return self.conv(x)
@@ -16,7 +16,7 @@ class EmbeddingLayer(nn.Module):
 class LastLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super(LastLayer,self).__init__()
-		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=False)
+		self.conv = nn.Conv2d(i_ch,o_ch,kernel_size=1,bias=True)
 
 	def forward(self,x):
 		return self.conv(x)
@@ -33,10 +33,10 @@ class ConvBlock1(nn.Module):
 			first_stride = 2 # HALVE HxW -- strictly for 1_4
 		else:
 			first_stride = 1 # HALF-PADDING
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=False)			
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)			
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
 
@@ -62,7 +62,7 @@ class UpBlock1_4(nn.Module):
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
 
@@ -87,10 +87,10 @@ class ConvBlock2(nn.Module):
 		else:
 			raise ValueError("BLOCK TYPE NOT WELL DEFINED IN CONVOLUTION BLOCK 2.")
 
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
 
@@ -114,7 +114,7 @@ class UpBlock2_4(nn.Module):
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
 
@@ -132,10 +132,10 @@ class UpBlock2_4(nn.Module):
 class ConvBlock3(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super().__init__()
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
 
@@ -161,13 +161,13 @@ class ConvBlock4(nn.Module):
 		else:
 			raise ValueError("BLOCK TYPE NOT WELL DEFINED IN CONVOLUTION BLOCK 4.")
 
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
-		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
 		self.R3 = nn.ReLU(inplace=True)
 
@@ -190,10 +190,10 @@ class UpBlock4_4(nn.Module):
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
-		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
 		self.R3 = nn.ReLU(inplace=True)
 
@@ -221,13 +221,13 @@ class ConvBlock5(nn.Module):
 		else:
 			raise ValueError("BLOCK TYPE NOT WELL DEFINED IN CONV BLOCK 5.")
 			
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
-		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
 		self.R3 = nn.ReLU(inplace=True)
 
@@ -267,13 +267,13 @@ class UpBlock5_4(ConvBlock5):
 class ConvBlock6(nn.Module):
 	def __init__(self,i_ch,o_ch):
 		super().__init__()
-		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
 		self.R1 = nn.ReLU(inplace=True)
-		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
 		self.R2 = nn.ReLU(inplace=True)
-		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=False)
+		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
 		self.R3 = nn.ReLU(inplace=True)
 
@@ -302,26 +302,28 @@ class UNet1_1(nn.Module):
        	self.model_id   = model_id
 
         # ENCODER
+        down_op_params = {'kernel_size':2,'stride':2,'padding':0}
         self.encoder_1 = ConvBlock1(in_channels,32,'A')
-        self.down_op_1 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
+        self.down_op_1 = nn.MaxPool2d(**down_op_params)        
         self.encoder_2 = ConvBlock1(32,64,'A')
-        self.down_op_2 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+        self.down_op_2 = nn.MaxPool2d(**down_op_params)
         self.encoder_3 = ConvBlock1(64,128,'A')
-        self.down_op_3 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)
+        self.down_op_3 = nn.MaxPool2d(**down_op_params)
         self.encoder_4 = ConvBlock1(128,256,'A')
-        self.down_op_4 = nn.MaxPool2d(kernel_size=2,stride=2,padding=0)        
+        self.down_op_4 = nn.MaxPool2d(**down_op_params)        
         
         # BOTTLENECK
         self.bottleneck = ConvBlock1(256,512)
         
         # DECODER
-        self.up_op_4   = nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
+        up_op_params = {'kernel_size':2,'stride':2,'bias':False}
+        self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
         self.decoder_4 = ConvBlock1(512,256,'A')
-        self.up_op_3   = nn.ConvTranspose2d(256,128,kernel_size=2,stride=2,bias=False)
+        self.up_op_3   = nn.ConvTranspose2d(256,128,**up_op_params)
         self.decoder_3 = ConvBlock1(256,128,'A')
-        self.up_op_2   = nn.ConvTranspose2d(128,64,kernel_size=2,stride=2,bias=False)        
+        self.up_op_2   = nn.ConvTranspose2d(128,64,**up_op_params)        
         self.decoder_2 = ConvBlock1(128,64,'A')
-        self.up_op_1   = nn.ConvTranspose2d(64,32,kernel_size=2,stride=2,bias=False)        
+        self.up_op_1   = nn.ConvTranspose2d(64,32,**up_op_params)        
         self.decoder_1 = ConvBlock1(64,32,'A')
 
         # LASTLAYER
@@ -368,13 +370,14 @@ class UNet1_2(nn.Module):
 		self.bottleneck = ConvBlock1(256,512)
 
 		#DECODER
-		self.up_op_4   = nn.ConvTranspose2d(512,256,kernel_size=2,stride=2,bias=False)
+		up_op_params   = {'kernel_size':2,'stride':2,'bias':False}
+		self.up_op_4   = nn.ConvTranspose2d(512,256,**up_op_params)
 		self.decoder_4 = ConvBlock1(512,256,'A')
-		self.up_op_3   = nn.ConvTranspose2d(256,128,kernel_size=2,stride=2,bias=False)
+		self.up_op_3   = nn.ConvTranspose2d(256,128,**up_op_params)
 		self.decoder_3 = ConvBlock1(256,128,'A')
-		self.up_op_2   = nn.ConvTranspose2d(128,64,kernel_size=2,stride=2,bias=False)
+		self.up_op_2   = nn.ConvTranspose2d(128,64,**up_op_params)
 		self.decoder_2 = ConvBlock1(128,64,'A')
-		self.up_op_1   = nn.ConvTranspose2d(64,32,kernel_size=2,stride=2,bias=False)
+		self.up_op_1   = nn.ConvTranspose2d(64,32,**up_op_params)
 		self.decoder_1 = ConvBlock1(64,32,'A')
 
 		#LAST-LAYER
