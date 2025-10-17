@@ -89,4 +89,6 @@
 {"ID":88,"SEED":1,"EPOCHS":100,"LEARNING_RATE":0.0001,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":32,"INIT":"random","BANDS":"vnir","OUTPUTS":2,"MODEL":"unet5_3"}
 {"ID":89,"SEED":1,"EPOCHS":100,"LEARNING_RATE":0.0001,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":32,"INIT":"random","BANDS":"vnir","OUTPUTS":2,"MODEL":"unet5_4"}
 {"ID":90,"SEED":1,"EPOCHS":100,"LEARNING_RATE":0.0001,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":32,"INIT":"random","BANDS":"vnir","OUTPUTS":2,"MODEL":"unet6_1"}
+{"ID":101,"SEED":1,"EPOCHS":100,"LEARNING_RATE":0.0001,"SCHEDULER":"none","OPTIM":"adamw","DECAY":0.01,"LOSS":"ce","BATCH":32,"INIT":"random","BANDS":"rgb","OUTPUTS":2,"MODEL":"unet1_1"}
 {"ID":999,"SEED":1,"EPOCHS":1,"LEARNING_RATE":0.01,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet1_1"}
+

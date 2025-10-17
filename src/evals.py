@@ -63,7 +63,7 @@ def plot_all_training_log(log_dir,out_dir):
 		plot_training_log(f"{log_dir}/{file}",out_dir)
 
 
-def find_best_epoch(log_path,metric='v_iou'):
+def find_best_epoch(log_path,metric='v_iou'): #<---- fix for empty+non-existing files!!!
 	'''
 	Iterate thru epochs in a model's log to find the best performer for
 	this particular model (best epoch).
@@ -87,12 +87,17 @@ def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 	'''
 	Iterate thru logs and find the best model by IoU.
 	'''
+	#check metric labels
 	assert metric in ['v_iou','v_ppv','v_tpr'], "Incorrect metric in evals.find_best_performer()"
 
+	#epoch log per model
 	files = sorted(glob("epoch_log_*.tsv",root_dir=log_dir))
+
+	#adjust path
 	if log_dir[-1] == '/':
 		log_dir = log_dir.rstrip('/')
 
+	#get ids
 	model_ids = [_.split('_')[-1].rstrip('.tsv') for _ in files]
 	model_max = [find_best_epoch(f"{log_dir}/{_}",metric) for _ in files]
 
