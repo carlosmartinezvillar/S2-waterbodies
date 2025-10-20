@@ -63,18 +63,29 @@ def plot_all_training_log(log_dir,out_dir):
 		plot_training_log(f"{log_dir}/{file}",out_dir)
 
 
-def find_best_epoch(log_path,metric='v_iou'): #<---- fix for empty+non-existing files!!!
+def find_best_epoch(log_path,metric='v_iou'):
 	'''
 	Iterate thru epochs in a model's log to find the best performer for
 	this particular model (best epoch).
 
 	Possible metrics: 'v_iou','v_ppv','v_tpr','v_acc'
 	'''
-	with open(log_path,'r') as fp:
-		header = fp.readline().rstrip('\n').split('\t')
-		lines  = [_.rstrip('\n').split('\t') for _ in list(fp)]
+	
+	# check - no file
+	if not os.path.isfile(log_path):
+		return 0
 
-	if len(lines) == 0:
+	# open and check if error loading
+	try:
+		with open(log_path,'r') as fp:
+			header = fp.readline().rstrip('\n').split('\t')
+			lines  = [_.rstrip('\n').split('\t') for _ in list(fp)]
+	except Exception as e:
+		print(f"Skipping {log_path}.\nGot an error loading file: {e}")
+
+
+	# check - Did not run for at least 1 epoch
+	if len(lines) < 2:
 		return 0
 
 	array  = np.array(lines).astype(float)
@@ -88,7 +99,7 @@ def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 	Iterate thru logs and find the best model by IoU.
 	'''
 	#check metric labels
-	assert metric in ['v_iou','v_ppv','v_tpr'], "Incorrect metric in evals.find_best_performer()"
+	assert metric in ['v_iou','v_ppv','v_tpr','v_acc'], "Wrong metric in find_best_performer()"
 
 	#epoch log per model
 	files = sorted(glob("epoch_log_*.tsv",root_dir=log_dir))
@@ -99,6 +110,8 @@ def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 
 	#get ids
 	model_ids = [_.split('_')[-1].rstrip('.tsv') for _ in files]
+
+	# open each log and get best epoch by 'metric'
 	model_max = [find_best_epoch(f"{log_dir}/{_}",metric) for _ in files]
 
 	assert os.path.isfile(hp_file), f"No {hp_file} found."
