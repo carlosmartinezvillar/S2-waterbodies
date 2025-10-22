@@ -94,7 +94,7 @@ def find_best_epoch(log_path,metric='v_iou'):
 	return best_epoch_val
 
 
-def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
+def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou',sorted=True):
 	'''
 	Iterate thru logs and find the best model by IoU.
 	'''
@@ -114,15 +114,16 @@ def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 	# open each log and get best epoch by 'metric'
 	model_max = [find_best_epoch(f"{log_dir}/{_}",metric) for _ in files]
 
+	# check if hyperparameter is present and load
 	assert os.path.isfile(hp_file), f"No {hp_file} found."
 	with open(hp_file,'r') as fp:
 		HP_LIST = [json.loads(line) for line in fp.readlines()]
 
-	indexed = {}
-	for row in HP_LIST:
-		indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
+	# A diffent tree-like structure to look at parameters
+	# indexed = {}
+	# for row in HP_LIST:
+		# indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
 	
-	pass
 	
 	# hp_models = [row['MODEL'] for row in HP_LIST]
 	# hp_ids    = [row['ID'] for row in HP_LIST]
@@ -132,6 +133,7 @@ def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou'):
 	# sorted_idx = np.argsort(matched_names)
 	# x = np.array(matched_names)[sorted_idx]
 	# y = np.array(model_max)[sorted_idx]
+	sorted_index = np.argsort()
 	
 	# names = [indexed[i]['MODEL'] for i in model_ids]
 	# x = [f"{model_ids[i]} ({n})" for i,n in enumerate(names)]
