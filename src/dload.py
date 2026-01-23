@@ -9,6 +9,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.v2 as v2
 import glob
 
+import utils
 ################################################################################
 # CLASSES
 ################################################################################
@@ -39,10 +40,14 @@ class SentinelDataset(torch.utils.data.Dataset):
 			v2.ToDtype(torch.float32,scale=True)		
 		])
 
+		def help_label_transform(x): # forkingpickler not working
+			return torch.div(torch.squeeze(x,0),lbl_div,rounding_mode='floor')
+
 		self.label_transform = v2.Compose([
 			v2.ToImage(),
-			v2.Lambda(lambda x: torch.squeeze(x,0)),
-			v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
+			# v2.Lambda(lambda x: torch.squeeze(x,0)),
+			# v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
+			v2.Lambda(help_label_transform) # forkingpickler not working
 			v2.ToDtype(torch.int64)
 		])
 
@@ -63,7 +68,7 @@ class SentinelDataset(torch.utils.data.Dataset):
 		lbl = self.label_transform(Image.open(f'{self.ids[idx]}_LBL.tif'))
 		if self.joint_transform:
 			img,lbl = self.joint_transform(img,lbl)
-		return img,lbl
+		return img,lbl,self.ids[idx]
 
 
 class PotsdamDataset(torch.utils.data.Dataset):
@@ -123,22 +128,65 @@ def preprocess_isaid():
 
 
 if __name__ == '__main__':
+
+	__spec__ = None #multiprocessing w/ interactive/debugger
+
 	print('-> dload.py')
-	### TEST DATALOADERS --- TODO
+
+	DATA_DIR = '../../chips_sorted_256'
+
+	# SET SEED
+	utils.set_seed(476)
+
 	transform = v2.Compose([
 		v2.RandomHorizontalFlip(p=0.5),
 		v2.RandomVerticalFlip(p=0.5)
 	])
 
-	ds = SentinelDataset('../../chips_sorted/validation',n_bands=3,n_labels=2,transform=None)
-	print("-"*40)
-	print(f"CHECKING {ds.__class__.__name__}")
-	print("-"*40)	
-	x,t = ds[0]
-	print(f'{x.shape} {x.dtype}\n{t.shape} {t.dtype}')
-	start = time.time()
-	for x,t in ds:
-		pass
-	delta = time.time() - start
-	print(f"TOTAL TIME: {delta:.5f} | SAMPLES: {len(ds)}")
+	tr_ds = SentinelDataset(f"{DATA_DIR}/training",
+		n_bands=3,
+		n_labels=2,
+		transform=transform)
+
+	va_ds = SentinelDataset(f"{DATA_DIR}/validation",
+		n_bands=3,
+		n_labels=2,
+		transform=None)
+
+	dataloaders = {
+		'training': torch.utils.data.DataLoader(
+			tr_ds,
+			batch_size=8,
+			drop_last=False,
+			shuffle=True,
+			num_workers=2),
+		'validation': torch.utils.data.DataLoader(
+			va_ds,
+			batch_size=8,
+			drop_last=False,
+			shuffle=False,
+			num_workers=0)
+	}
+
+
+	for epoch in range(5):
+		print(f"epoch nr. {epoch}")
+		print("-"*20)
+		for i,(X,T,img_path) in enumerate(dataloaders['training']):
+			if i==0:
+				print("First batch")
+				for p in img_path:print(p)
+			pass
+
+
+	# print("-"*40)
+	# print(f"CHECKING {tr_ds.__class__.__name__}")
+	# x,t = tr_ds[0]
+	# print(f'SHAPE: {x.shape} {x.dtype}\n{t.shape} {t.dtype}')
+	# print("-"*40)	
+	# start = time.time()
+	# for x,t in ds:
+	# 	pass
+	# delta = time.time() - start
+	# print(f"TOTAL TIME: {delta:.5f} | SAMPLES: {len(ds)}")
 	pass
