@@ -94,7 +94,7 @@ def find_best_epoch(log_path,metric='v_iou'):
 	return best_epoch_val
 
 
-def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou',sorted=True):
+def find_best_performer(log_dir,out_dir,hp_file,metric='v_iou',sorted=True): #<--- fix this to do it for each metric
 	'''
 	Iterate thru logs and find the best model by IoU.
 	'''

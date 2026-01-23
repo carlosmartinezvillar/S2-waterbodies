@@ -256,15 +256,15 @@ def sequence_hyperparameters(file_path):
 
 
 def set_seed(seed,cuda=True):
-    torch.manual_seed(seed)
-    if cuda is True:
-	    torch.cuda.manual_seed(seed)  # If using CUDA
-    # torch.cuda.manual_seed_all(seed)  # If using multiple GPUs
     np.random.seed(seed)
     random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+	    torch.cuda.manual_seed(seed)  # If using CUDA
+	    torch.cuda.manual_seed_all(seed)  # If using multiple GPUs
+	    torch.backends.cudnn.deterministic = True
+	    torch.backends.cudnn.benchmark = False #Am I losing speed here?
     os.environ['PYTHONHASHSEED'] = str(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False #Am I losing speed here?
 
 ####################################################################################################
 if __name__ == "__main__":
