@@ -40,14 +40,14 @@ class SentinelDataset(torch.utils.data.Dataset):
 			v2.ToDtype(torch.float32,scale=True)		
 		])
 
-		def help_label_transform(x): # forkingpickler not working
+		def help_label_transform(x): # --forkingpickler not working--
 			return torch.div(torch.squeeze(x,0),lbl_div,rounding_mode='floor')
 
 		self.label_transform = v2.Compose([
 			v2.ToImage(),
 			# v2.Lambda(lambda x: torch.squeeze(x,0)),
 			# v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
-			v2.Lambda(help_label_transform) # forkingpickler not working
+			v2.Lambda(help_label_transform), # --forkingpickler not working--
 			v2.ToDtype(torch.int64)
 		])
 
@@ -114,6 +114,9 @@ class iSaidDataset(torch.utils.data.Dataset):
 		return
 
 
+################################################################################
+# EXTERNAL DATASETS PREPROCESSING
+################################################################################
 def preprocess_potsdam():
 	CHP_SIZE = 512
 	pass
@@ -127,6 +130,9 @@ def preprocess_isaid():
 	pass
 
 
+################################################################################
+# MAIN
+################################################################################
 if __name__ == '__main__':
 
 	__spec__ = None #multiprocessing w/ interactive/debugger
@@ -159,7 +165,7 @@ if __name__ == '__main__':
 			batch_size=8,
 			drop_last=False,
 			shuffle=True,
-			num_workers=2),
+			num_workers=4),
 		'validation': torch.utils.data.DataLoader(
 			va_ds,
 			batch_size=8,
