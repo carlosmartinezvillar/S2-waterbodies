@@ -8,6 +8,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 import torchvision.transforms.v2 as v2
 import glob
+import argparse
 
 import utils
 ################################################################################
@@ -40,14 +41,14 @@ class SentinelDataset(torch.utils.data.Dataset):
 			v2.ToDtype(torch.float32,scale=True)		
 		])
 
-		def help_label_transform(x): # --forkingpickler not working--
-			return torch.div(torch.squeeze(x,0),lbl_div,rounding_mode='floor')
+		# def help_label_transform(x): # --forkingpickler not working--
+			# return torch.div(torch.squeeze(x,0),lbl_div,rounding_mode='floor')
 
 		self.label_transform = v2.Compose([
 			v2.ToImage(),
-			# v2.Lambda(lambda x: torch.squeeze(x,0)),
-			# v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
-			v2.Lambda(help_label_transform), # --forkingpickler not working--
+			v2.Lambda(lambda x: torch.squeeze(x,0)),
+			v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
+			# v2.Lambda(help_label_transform), # --forkingpickler not working--
 			v2.ToDtype(torch.int64)
 		])
 
@@ -139,7 +140,12 @@ if __name__ == '__main__':
 
 	print('-> dload.py')
 
-	DATA_DIR = '../../chips_sorted_256'
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--data-dir',required=True,help='dataset directory.')
+	args = parser.parse_args()
+	DATA_DIR  = args.data_dir
+	# DATA_DIR = '../../chips_sorted_256'
+	print(f'DATA_DIR set to {DATA_DIR}')
 
 	# SET SEED
 	utils.set_seed(476)
@@ -165,7 +171,7 @@ if __name__ == '__main__':
 			batch_size=8,
 			drop_last=False,
 			shuffle=True,
-			num_workers=4),
+			num_workers=3),
 		'validation': torch.utils.data.DataLoader(
 			va_ds,
 			batch_size=8,
@@ -175,8 +181,10 @@ if __name__ == '__main__':
 	}
 
 
+	print("\nTESTING BATCH ITERATION")
+	print("-"*40)
 	for epoch in range(5):
-		print(f"epoch nr. {epoch}")
+		print(f"\nepoch nr. {epoch}")
 		print("-"*20)
 		for i,(X,T,img_path) in enumerate(dataloaders['training']):
 			if i==0:
