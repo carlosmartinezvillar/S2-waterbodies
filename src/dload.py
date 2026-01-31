@@ -22,7 +22,6 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 		if (n_bands!=3) and (n_bands!=4):
 			raise ValueError("Incorrect number of bands in dataloader.")
-
 		if n_bands == 3:
 			self.input_func = self.rgb_get
 		if n_bands == 4:
@@ -30,7 +29,6 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 		if (n_labels)!=3 and (n_labels!=2):
 			raise ValueError("Incorrect number of target labels.")
-
 		if n_labels == 2:
 			lbl_div = 255
 		if n_labels == 3:
@@ -41,18 +39,14 @@ class SentinelDataset(torch.utils.data.Dataset):
 			v2.ToDtype(torch.float32,scale=True)		
 		])
 
-		# def help_label_transform(x): # --forkingpickler not working--
-			# return torch.div(torch.squeeze(x,0),lbl_div,rounding_mode='floor')
-
 		self.label_transform = v2.Compose([
 			v2.ToImage(),
 			v2.Lambda(lambda x: torch.squeeze(x,0)),
 			v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
-			# v2.Lambda(help_label_transform), # --forkingpickler not working--
 			v2.ToDtype(torch.int64)
 		])
 
-		self.joint_transform = transform #outside instance for validation/testing
+		self.additional_transform = transform #differentiate between train/validation/test
 
 	def rgb_get(self,idx):
 		r,g,b,_ = Image.open(f'{self.ids[idx]}_B0X.tif').split()		
@@ -65,11 +59,12 @@ class SentinelDataset(torch.utils.data.Dataset):
 		return len(self.ids)
 
 	def __getitem__(self,idx):
-		img = self.input_transform(self.input_func(idx))
-		lbl = self.label_transform(Image.open(f'{self.ids[idx]}_LBL.tif'))
-		if self.joint_transform:
-			img,lbl = self.joint_transform(img,lbl)
-		return img,lbl,self.ids[idx]
+		image = self.input_transform(self.input_func(idx))
+		label = self.label_transform(Image.open(f'{self.ids[idx]}_LBL.tif'))
+		if self.additional_transform:
+			image,label = self.additional_transform(image,label)
+		# return image,label,self.ids[idx]
+		return image,label
 
 
 class PotsdamDataset(torch.utils.data.Dataset):
@@ -77,7 +72,7 @@ class PotsdamDataset(torch.utils.data.Dataset):
 		self.chip_dir = chip_dir
 		self.paths    = sorted(glob.glob(f"{self.chip_dir}/*.tif"))
 
-		self.joint_transform = v2.Compose([
+		self.input_transform = v2.Compose([
 			v2.ToImage(),
 			v2.ToDtype(torch.float32,scale=True)
 		])
@@ -144,7 +139,6 @@ if __name__ == '__main__':
 	parser.add_argument('--data-dir',required=True,help='dataset directory.')
 	args = parser.parse_args()
 	DATA_DIR  = args.data_dir
-	# DATA_DIR = '../../chips_sorted_256'
 	print(f'DATA_DIR set to {DATA_DIR}')
 
 	# SET SEED

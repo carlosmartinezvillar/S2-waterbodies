@@ -151,21 +151,33 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=1
 
 		print(f'Best validation IoU: {best_iou:.4f}')
 
+def train_and_validate_ddp(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None,n_epochs=50,n_class=2):
+	N_tr = len(dataloaders['training'].dataset)
+	N_va = len(dataloaders['validation'].dataset)
+
+	log_header   = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
+	log_path     = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'	
+
+
 @total_time_decorator
-def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=50):
+def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None,n_epochs=50,n_class=2):
 
 	N_tr = len(dataloaders['training'].dataset)
 	N_va = len(dataloaders['validation'].dataset)
+	log_header   = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
+	log_path     = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'
+	epoch_logger = utils.Logger(log_path,log_header)
 	best_iou   = 0.0
 	best_epoch = 0
-	epoch_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
-	epoch_logger = utils.Logger(f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv',epoch_header)
+
 
 	for epoch in range(n_epochs):
-		tr_batch_loss = []
-		va_batch_loss = []
-		M_tr = utils.ConfusionMatrix(n_classes=2)
-		M_va = utils.ConfusionMatrix(n_classes=2)
+		# tr_batch_loss = []
+		# va_batch_loss = []
+		# M_tr = utils.ConfusionMatrix(n_classes=2)
+		# M_va = utils.ConfusionMatrix(n_classes=2)
+		confusion_matrix_tr = torch.zeros((n_classes,n_classes))
+		confusion_matrix_va = torch.zeros((n_classes,n_classes))
 		epoch_start_time = time.time()
 		print(f'\nEpoch {epoch}/{n_epochs-1}')
 		print('-'*80)
@@ -174,78 +186,84 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 		# TRAINING
 		############################################################		
 		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
-
-		tr_loss_sum = 0.0
+		loss_sum_tr = 0.0
 		samples_ran = 0
 		model.train()
 
 		for X,T in dataloaders['training']:
-			#to device
+			#TO DEVICE
 			X = X.to(CUDA_DEV,non_blocking=True)
 			T = T.to(CUDA_DEV,non_blocking=True)
 
-			# forward-pass
-			with torch.set_grad_enabled(True):
+			# FORWARD
+			with torch.autocast(device_type=CUDA_DEV, dtype=torch.float16,enabled=True):
 				output = model(X)
 				loss   = loss_fn(output,T)
 
-			# backprop
+			# BACKPROP
 			optimizer.zero_grad()
-			loss.backward()
-			optimizer.step()
+
+			scaler.scale(loss).backward()
+			scaler.step(optimizer)
+			scaler.update()
 
 			# METRICS
-			tr_loss_sum += loss.item() * X.size(0)
-			samples_ran += X.size(0)			
-			Y = output.detach().cpu().numpy().argmax(axis=1)
-			T = T.detach().cpu().numpy()
-			M_tr.update(Y,T)
-			tr_batch_loss.append(loss.item())
+			loss_sum_tr += loss.item() * X.size(0)
+			# samples_ran += X.size(0)
 
-			# update bar
-			t.set_postfix(loss='{:05.5f}'.format(tr_loss_sum/samples_ran))
+			Y = output.detach().argmax(axis=1)
+			T = T.detach()
+			# M_tr.update(Y,T)
+			# tr_batch_loss.append(loss.item())
+			# t.set_postfix(loss='{:05.5f}'.format(loss_sum_tr/samples_ran))
 			t.update(1)
+
 		t.close()
 
+		#SCHEDULER UPDATE
 		if scheduler is not None:
 			scheduler.step()
 
 		# LOG TRAINING
-		loss_tr = tr_loss_sum / N_tr
-		print(f'[T] loss: {loss_tr:.5f} | acc: {M_tr.acc():.5f} | iou: {M_tr.iou():.5f}')
+		loss_tr = loss_sum_tr / N_tr
+		# print(f'[T] LOSS: {loss_tr:.5f} | ACC: {M_tr.acc():.5f} | IoU: {M_tr.iou():.5f}')
 
 		
 		############################################################
 		# VALIDATION
 		############################################################
 		t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
-
-		va_loss_sum = 0.0
+		loss_sum_va = 0.0
 		samples_ran = 0
 		model.eval()
 
-		for X,T in dataloaders['validation']:
-			#to device
-			X = X.to(CUDA_DEV,non_blocking=True)
-			T = T.to(CUDA_DEV,non_blocking=True)
+		with torch.no_grad():
 
-			with torch.set_grad_enabled(False):
+			for X,T in dataloaders['validation']:
+				#to device
+				X = X.to(CUDA_DEV,non_blocking=True)
+				T = T.to(CUDA_DEV,non_blocking=True)
+
+				# FORWARD
+				with torch.autocast(device_type="cuda",dtype)
 				output = model(X)
 				loss   = loss_fn(output,T)
-				_,Y    = torch.max(output,1)
+				_,Y    = torch.max(output,1) #soft-prediction, hard-prediction
 
-			# METRICS
-			va_loss_sum += loss.item() * X.size(0)
-			samples_ran += X.size(0)
-			M_va.update(Y.cpu().numpy(),T.cpu().numpy())
-			va_batch_loss.append(loss.item())
+				# METRICS
+				loss_sum_va += loss.item() * X.size(0)
+				samples_ran += X.size(0)
+				M_va.update(Y.cpu().numpy(),T.cpu().numpy())
+				va_batch_loss.append(loss.item())
 
-			t.set_postfix(loss='{:05.5f}'.format(va_loss_sum/samples_ran))
-			t.update(1)
+				# t.set_postfix(loss='{:05.5f}'.format(loss_sum_va/samples_ran))
+				t.update(1)
+		
 		t.close()
 
+
 		# LOG VALIDATION
-		loss_va = va_loss_sum / N_va
+		loss_va = loss_sum_va / N_va
 		print(f'[V] loss: {loss_va:.5f} | acc: {M_va.acc():.5f} | iou: {M_va.iou():.5f}')
 
 		############################################################
@@ -263,7 +281,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epoc
 			best_epoch = epoch
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
-		print(f'Best validation IoU: {best_iou:.4f}')
+		print(f'Best validation IoU: {best_iou:.4f} -- Epoch {best_epoch}')
 
 		#LOG BATCH LOSSes
 		if epoch == 0:
@@ -281,7 +299,7 @@ if __name__ == "__main__":
 	#---------- GPU (IF SET) --------------------
 	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
 	if torch.cuda.is_available():
-		assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."
+		assert args.gpu < torch.cuda.device_count(), "GPU INDEX OUT OF RANGE."# <--- CHANGE THIS
 		CUDA_DEV = torch.device(f"cuda:{args.gpu}")
 	else:
 		CUDA_DEV = torch.device("cpu")
@@ -298,13 +316,12 @@ if __name__ == "__main__":
 	HP = HP_LIST[args.row] # load dictionary
 
 	#---------- INPUT BANDS ---------------------
-	assert HP['BANDS'] in ['rgb','vnir'],"INCORRECT BANDS IN JSON HP FILE."
-	if HP['BANDS'] == 'rgb':
-		input_bands = 3
-	if HP['BANDS'] == 'vnir':
-		input_bands = 4
+	assert HP['BANDS'] in [3,4],"INCORRECT NR. of BANDS IN JSON HYPERPARAMETER FILE."
+	input_bands = HP['BANDS']
 
 	#---------- OUTPUT CHANNELS -----------------
+	assert HP['CLASS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HYPERPARAMETER FILE."
+	# n_classes = HP['CLASS'] 
 
 	#---------- MODEL ---------------------------
 	model_str = HP['MODEL'][0:4]
@@ -315,6 +332,7 @@ if __name__ == "__main__":
 		pass
 	# ---> TO GPU
 	net = net.to(CUDA_DEV) #checked above
+	net = torch.compile(net)
 
 	#---------- LOSS ----------------------------
 	assert HP['LOSS'] in ["ce","ew","cw"], "INCORRECT STRING FOR LOSS IN DICT."
@@ -339,6 +357,9 @@ if __name__ == "__main__":
 		scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.9)
 	else:
 		scheduler = None	
+
+	#----------- AUTOMATIC MIXED PRECISION -------
+	scaler = torch.amp.GradScaler("cuda",enabled=True)
 
 	#---------- SET ALL SEEDS --------------------
 	assert HP['SEED'] in (0,1), "INCORRECT SEED IN JSON PARAMETER DICT."

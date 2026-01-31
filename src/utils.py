@@ -24,16 +24,16 @@ class Logger():
 			The column names to be included.
 		'''
 		self.path = path
-		# self.head = '\t'.join([_ for _ in head])
 		self.arr  = None
 
-		with open(self.path,'w+') as fp:
+		with open(self.path,'w') as fp:
 			fp.write('\t'.join([_ for _ in head])+'\n')
 
 	def log(self,stats):
 		'''
 		stats: [float] or np.ndarray
-			List with floats corresponding to accuracy, recall, etc.
+			List with floats corresponding to one line of the log including 
+			accuracy, recall, etc.
 		'''
 		line = '\t'.join([f'{_:.5f}' for _ in stats])
 		with open(self.path,'a') as fp:
@@ -178,13 +178,12 @@ def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 		save_path = f'{path}/best_{model.model_id:03}.pth.tar'
 	else:
 		save_path = f'{path}/model_{model.model_id:03}_e{epoch:02}.pth.tar'
-	checkpoint = {
-			'epoch': epoch,
-			't_loss': t_loss,
-			'v_loss': v_loss,
-			'model_state_dict': model.state_dict(),
-			'optim_state_dict': optim.state_dict()
-		}
+	checkpoint = {'epoch': epoch,
+					't_loss': t_loss,
+					'v_loss': v_loss,
+					'model_state_dict': model.state_dict(),
+					'optim_state_dict': optim.state_dict(),
+					'scaler_state_dict': scaler.state_dict()}
 	torch.save(checkpoint,save_path)
 
 
