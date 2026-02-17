@@ -151,12 +151,15 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,n_epochs=1
 
 		print(f'Best validation IoU: {best_iou:.4f}')
 
+
 def train_and_validate_ddp(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None,n_epochs=50,n_class=2):
 	N_tr = len(dataloaders['training'].dataset)
 	N_va = len(dataloaders['validation'].dataset)
 
 	log_header   = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
 	log_path     = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'	
+
+	# dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
 
 
 @total_time_decorator
@@ -170,10 +173,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 	best_iou   = 0.0
 	best_epoch = 0
 
-
 	for epoch in range(n_epochs):
-		# tr_batch_loss = []
-		# va_batch_loss = []
 		# M_tr = utils.ConfusionMatrix(n_classes=2)
 		# M_va = utils.ConfusionMatrix(n_classes=2)
 		confusion_matrix_tr = torch.zeros((n_classes,n_classes))
@@ -196,13 +196,12 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 			T = T.to(CUDA_DEV,non_blocking=True)
 
 			# FORWARD
-			with torch.autocast(device_type=CUDA_DEV, dtype=torch.float16,enabled=True):
+			with torch.autocast(device_type="cuda", dtype=torch.float16,enabled=True):
 				output = model(X)
 				loss   = loss_fn(output,T)
 
 			# BACKPROP
 			optimizer.zero_grad()
-
 			scaler.scale(loss).backward()
 			scaler.step(optimizer)
 			scaler.update()
@@ -211,10 +210,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 			loss_sum_tr += loss.item() * X.size(0)
 			# samples_ran += X.size(0)
 
-			Y = output.detach().argmax(axis=1)
+			Y = output.detach().argmax(axis=1) #keep detach if needed to switch to .max()
 			T = T.detach()
 			# M_tr.update(Y,T)
-			# tr_batch_loss.append(loss.item())
 			# t.set_postfix(loss='{:05.5f}'.format(loss_sum_tr/samples_ran))
 			t.update(1)
 
@@ -226,7 +224,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 
 		# LOG TRAINING
 		loss_tr = loss_sum_tr / N_tr
-		# print(f'[T] LOSS: {loss_tr:.5f} | ACC: {M_tr.acc():.5f} | IoU: {M_tr.iou():.5f}')
+		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {M_tr.acc():.5f} | IoU: {M_tr.iou():.5f}')
 
 		
 		############################################################
@@ -238,29 +236,27 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 		model.eval()
 
 		with torch.no_grad():
-
 			for X,T in dataloaders['validation']:
 				#to device
 				X = X.to(CUDA_DEV,non_blocking=True)
 				T = T.to(CUDA_DEV,non_blocking=True)
 
 				# FORWARD
-				with torch.autocast(device_type="cuda",dtype)
-				output = model(X)
-				loss   = loss_fn(output,T)
+				with torch.autocast(device_type="cuda",dtype=torch.float16,enabled=True):
+					output = model(X)
+					loss   = loss_fn(output,T)
 				_,Y    = torch.max(output,1) #soft-prediction, hard-prediction
 
 				# METRICS
-				loss_sum_va += loss.item() * X.size(0)
-				samples_ran += X.size(0)
-				M_va.update(Y.cpu().numpy(),T.cpu().numpy())
-				va_batch_loss.append(loss.item())
+				loss_sum_va += loss.item() * X.size(0) #sync
+				# samples_ran += X.size(0)
+				M_va.update(Y.cpu().numpy(),T.cpu().numpy()) #sync
+				va_batch_loss.append(loss.item()) #sync
 
 				# t.set_postfix(loss='{:05.5f}'.format(loss_sum_va/samples_ran))
 				t.update(1)
 		
 		t.close()
-
 
 		# LOG VALIDATION
 		loss_va = loss_sum_va / N_va
@@ -282,16 +278,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler=None
 			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
 
 		print(f'Best validation IoU: {best_iou:.4f} -- Epoch {best_epoch}')
-
-		#LOG BATCH LOSSes
-		if epoch == 0:
-			batch_fp_mode = 'w+'
-		else:
-			batch_fp_mode = 'a'
-		with open(f'{LOG_DIR}/train_batch_log_{model.model_id:03}.tsv',batch_fp_mode) as batch_fp:
-			batch_fp.writelines([f'{_:.5f}\n' for _ in tr_batch_loss])
-		with open(f'{LOG_DIR}/valid_batch_log_{model.model_id:03}.tsv',batch_fp_mode) as batch_fp:
-			batch_fp.writelines([f'{_:.5f}\n' for _ in va_batch_loss])
 
 
 if __name__ == "__main__":
@@ -344,11 +330,13 @@ if __name__ == "__main__":
 		loss_fn = None
 
 	#---------- OPTIMIZER -----------------------
-	assert HP["OPTIM"] in ["adam","lamb"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
+	assert HP["OPTIM"] in ["adam","lamb","adamw"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == "sgd":
 		optimizer = torch.optim.SGD(net.parameters(),lr=HP['LEARNING_RATE'])
+	if HP['OPTIM'] == 'adamw':
+		optimizer = torch.optim.AdamW(net.parameters(),lr=HP['LEARNING_RATE'])
 
 	#---------- LEARNING RATE SCHEDULER ----------
 	if HP['SCHEDULER'] == "step":
