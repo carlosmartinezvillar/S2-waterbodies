@@ -171,7 +171,7 @@ class ConfusionMatrix():
 
 def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 	'''
-	Saves model+optim as .pth.tar 
+	Saves model+optim+scaler state as .pth.tar 
 	'''
 	# save_path = f'{MODEL_DIR}/state_{epoch:03d}.pt'
 	if best == True:
@@ -185,6 +185,24 @@ def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 					'optim_state_dict': optim.state_dict(),
 					'scaler_state_dict': scaler.state_dict()}
 	torch.save(checkpoint,save_path)
+
+
+def save_ddp_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
+	'''
+	Saves model+optim+scaler state. References module within DDP wrapper.
+	'''
+	if best == True:
+		save_path = f'{path}/best_{model.module.model_id:03}.pth.tar'
+	else:
+		save_path = f'{path}/model_{model.module.model_id:03}_e{epoch:02}.pth.tar'
+	checkpoint = {'epoch': epoch,
+					't_loss': t_loss,
+					'v_loss': v_loss,
+					'model_state_dict': model.module.state_dict(),
+					'optim_state_dict': optim.state_dict(),
+					'scaler_state_dict': scaler.state_dict()}
+	torch.save(checkpoint,save_path)
+
 
 
 def load_checkpoint(path,model,optim):
