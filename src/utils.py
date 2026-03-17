@@ -1,6 +1,3 @@
-# import gdal
-# import geopandas as gpd
-# import matplotlib.pyplot as plt
 # import rasterio
 # from PIL import Image, ImageDraw
 import os
@@ -90,19 +87,6 @@ class ConfusionMatrix():
 			self.FN = self.M[0,1] 
 			self.FP = self.M[1,0] 
 			self.TN = self.M[1,1] 
-			#another way
-			# tp_mask = (Y==1) & (T==1)
-			# fp_mask = tp_mask ^ (Y==1)
-			# fn_mask = tp_mask ^ (T==1)
-			# tn_mask = ~(tp_mask | fp_mask | fn_mask)
-			#yet another way...
-			# tnm = ~((Y==1) | (T==1))
-			# tn_mask = (Y==0) & (T==0)
-			# tnm = ~(Y==1) & ~(T==1)
-			# self.TP += tp_mask.sum()
-			# self.FP += fp_mask.sum()
-			# self.FN += fn_mask.sum()
-			# self.TN += tn_mask.sum()
 
 		if self.n_classes == 3:
 			# intersections and such -- coulda been modulo loop
