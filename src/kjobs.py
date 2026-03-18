@@ -41,18 +41,18 @@ def launch_jobs(template_path,job_nrs):
 		obj['spec']['template']['spec']['containers'][0]['args'][0] = new_cmd_str
 
 		#CREATE TEMP FILE TO PASS IN KUBERNETES CLI CALL
-		with open('cfg/temp.yml','w+') as fp_temp:
+		with open('../cfg/temp.yml','w+') as fp_temp:
 			yaml.dump(obj,fp_temp)
 
 		#run
-		out = sp.run("kubectl create -f cfg/temp.yml",capture_output=True,text=True,shell=True)
+		out = sp.run("kubectl create -f ../cfg/temp.yml",capture_output=True,text=True,shell=True)
 		if out.returncode != 0:
-			print(f"ERROR launching job for model listed in row {row}")
-			print(out.stderr)
+			print(f"ERROR launching job for model {model_id}")
+			print(f"STDERR:\n{out.stderr}")
 		print(f"STDOUT:{out.stdout}")
 
 	#clear temp file
-	os.remove('cfg/temp.yml')
+	os.remove('../cfg/temp.yml')
 
 
 def clear_jobs(start,end):
@@ -123,4 +123,5 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	#RUN
+	# this assumes executing from inside src/
 	launch_jobs(args.spec,job_queue)

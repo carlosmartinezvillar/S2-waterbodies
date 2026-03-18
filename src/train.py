@@ -424,7 +424,7 @@ if __name__ == "__main__":
 		scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=10,gamma=0.3)
 	if HP['SCHEDULER'] == "exp":
 		scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer,gamma=0.9)
-	if HP['SCHEDULER'] == "none"
+	if HP['SCHEDULER'] == "none":
 		scheduler = None
 
 	#----------- AUTOMATIC MIXED PRECISION ---------------------------------------------------------
