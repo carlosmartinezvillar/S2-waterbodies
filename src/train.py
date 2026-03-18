@@ -7,7 +7,7 @@ import random
 import time
 from tqdm import tqdm
 import argparse
-import json
+import jsonw
 from functools import wraps
 
 import utils
@@ -15,7 +15,7 @@ import model
 import dload
 
 ####################################################################################################
-# SET GLOBAL VARS FROM ENV ET CETERA ET CETERA
+# SET GLOBAL VARS FROM ENV OR ARGS
 ####################################################################################################
 __spec__ = None # DEBUG with tqdm -- temp.
 
@@ -29,23 +29,25 @@ required.add_argument('--net-dir',required=True,
 	help='Directory where the weights of trained models are dumped.')
 required.add_argument('--log-dir',required=True,default='../log',
 	help='Training logs directory.')
-required.add_argument('-p','--params',required=True,default='../hpo/parameters.json',
-	help='Path to hyperparameters file, if different than default.')
 required.add_argument('--row',required=True,type=int,default=0,
-	help='Row number in hyperparameter file.')
+	help='Model id number in JSON hyperparameter file (default ../hpo/params.json).')
 
 optional.add_argument('--gpu',required=False,type=int,default=0,
 	help='GPU id to train in, if different than 0. Useful to select a gpu in a multi-gpu machine.')
 optional.add_argument('--full',required=False,action='store_true',default=False,
 	help='Train on both training and validation sets (training final model).')
+optional.add_argument('-p','--params',required=False,default='../hpo/parameters.json',
+	help='Path to JSON hyperparameter file (if not default).')
 args = parser.parse_args()
 
-DATA_DIR    = args.data_dir
-LOG_DIR     = args.log_dir
-MODEL_DIR   = args.net_dir
-CUDA_DEV    = None
+DATA_DIR  = args.data_dir
+LOG_DIR   = args.log_dir
+MODEL_DIR = args.net_dir
+CUDA_DEV  = None
 
-
+####################################################################################################
+# SOME HELPER FUNCTIONS
+####################################################################################################
 def calculate_metrics(confmat):
 	'''
 	Calculate precision, recall, accuracy, and IoU for a 
@@ -66,14 +68,22 @@ def calculate_metrics(confmat):
 
 	return ppv,tpr,acc,iou
 
-def update_confusion_matrix(confmat,Y,T):
+
+def update_confusion_matrix(gpu_mat,Y,T):
 	'''
-	Update a confusion matrix tensor in gpu. 
+	Update a confusion matrix tensor in gpu. Per-pixel classification.
 	'''
-	confmat[0,0] += ((T==0) & (Y==0)).sum() #TN  #<--- change this to modulo op for more classes
-	confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
-	confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
-	confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
+	# confmat[0,0] += ((T==0) & (Y==0)).sum() #TN  #<--- change this to modulo op for more classes
+	# confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
+	# confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
+	# confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
+
+	for k in range(gpu_mat.size(0)*gpu_mat.size(0)):
+		i = k // gpu_mat.size(0) #row
+		j = k % gpu_mat.size(0) #col
+		confmat[i,j] += ((T==i) & (Y==j)).sum()
+
+
 
 
 def total_time_decorator(orig_func):
@@ -191,7 +201,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 
 	N_tr = len(dataloaders['training'].dataset)
 	N_va = len(dataloaders['validation'].dataset)
-	log_file_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
+	# log_file_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
+	log_file_header = ["tloss","vloss"]
+	log_file_header += [f"tacc{c}" for c in n_classes]
+	log_file_header += [f"vacc{c}" for c in n_classes]
+	log_file_header += [f"vtpr{c}" for c in n_classes]
+	log_file_header += [f"vppv{c}" for c in n_classes]
+	log_file_header += [f"viou{c}" for c in n_classes]	
+
 	log_file_path   = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'
 	logger     = utils.Logger(log_file_path,log_file_header)
 	best_iou   = 0.0
@@ -210,12 +227,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 
 		############################################################
 		# TRAINING
-		############################################################		
+		############################################################
+		# LOGS
 		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
 		loss_sum_tr   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_tr = torch.zeros(1,device=CUDA_DEV)
-		model.train()
 
+		#LOOP
+		model.train()		
 		for X,T in dataloaders['training']:
 
 			#TO DEVICE
@@ -254,23 +273,27 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 			scheduler.step()
 
 		# TRAINING METRICS FOR LOG
-		loss_tr    = (loss_sum_tr/sample_sum_tr).item() #sync
-		cpu_mat_tr = gpu_mat_tr.cpu() #sync
-		tr_ppv,tr_tpr,tr_acc,tr_iou = calculate_metrics(cpu_mat_tr)
-		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f} | IoU: {tr_iou[-1]:.5f}')
+		loss_tr    = (loss_sum_tr/sample_sum_tr).item() #-----------sync
+		cpu_mat_tr = gpu_mat_tr.cpu() #-----------------------------sync
+		tr_ppv,tr_tpr,tr_acc,tr_iou = calculate_metrics(cpu_mat_tr) #tensor,result per class 
+		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f}')
+		print(f'IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
 
 		
 		############################################################
 		# VALIDATION
 		############################################################
+		# LOGS
 		t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
 		loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_va = torch.zeros(1,device=CUDA_DEV)
-		model.eval()
 
+		# LOOP
+		model.eval()
 		with torch.no_grad():
 			for X,T in dataloaders['validation']:
-				#to device
+
+				# TO DEV
 				X = X.to(CUDA_DEV,non_blocking=True)
 				T = T.to(CUDA_DEV,non_blocking=True)
 
@@ -278,13 +301,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 				with torch.autocast(device_type="cuda",dtype=torch.float16,enabled=True):
 					output = model(X)
 					loss   = loss_fn(output,T)
-				_,Y    = torch.max(output,1) #soft-prediction, hard-prediction
+				Y_soft,Y   = torch.max(output,1) #soft-prediction, hard-prediction
 
 				# METRICS
 				loss_sum_va   += loss.detach() * X.size(0)
 				sample_sum_va += X.size(0)
 
-				gpu_mat_va[0,0] += ((T==0) & (Y==0)).sum() #TN <--- change to modulo op for 2+ classes
+				gpu_mat_va[0,0] += ((T==0) & (Y==0)).sum() #TN
 				gpu_mat_va[0,1] += ((T==0) & (Y==1)).sum() #FP
 				gpu_mat_va[1,0] += ((T==1) & (Y==0)).sum() #FN
 				gpu_mat_va[1,1] += ((T==1) & (Y==1)).sum() #TP water
@@ -298,7 +321,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
 		cpu_mat_va = gpu_mat_va.cpu() #---------------------------------sync
 		va_ppv,va_tpr,va_acc,va_iou = calculate_metrics(cpu_mat_va)
-		print(f'[V] loss: {loss_va:.5f} | acc: {va_acc[-1]:.5f} | iou: {va_iou[-1]:.5f}')
+		print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}')
+		print(f'IoU_0: {va_iou[0]:.5f} | IoU_1: {va_iou[1]:.5f}')
 
 		############################################################
 		# LOG EPOCH
@@ -308,12 +332,18 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		print(f'\nEpoch time: {epoch_time:.2f}s')
 
 		# RESULTS
-		epoch_result = [loss_tr,tr_acc[-1],loss_va,va_acc[-1],va_tpr[-1],va_ppv[-1],va_iou[-1]] # Update to 2+class
+		epoch_result = [loss_tr,loss_va]
+		epoch_result += [tr_acc[i] for i in n_classes]
+		epoch_result += [va_acc[i] for i in n_classes]
+		epoch_result += [va_tpr[i] for i in n_classes]
+		epoch_result += [va_ppv[i] for i in n_classes]
+		epoch_result += [va_iou[i] for i in n_classes]
+		# epoch_result +=[loss_tr,loss_va,va_acc[-1],va_tpr[-1],va_ppv[-1],va_iou[-1]]
 		# va_mIoU = va_iou.mean() etc.
 		logger.log(epoch_result)
 
 		# SAVE MODEL
-		epoch_iou = va_iou[-1]
+		epoch_iou = va_iou[-1] #change this to mIoU for 3+ classes
 		if best_iou < epoch_iou:
 			best_iou   = epoch_iou
 			best_epoch = epoch
@@ -329,10 +359,12 @@ if __name__ == "__main__":
 	#---------- LOAD AND PARSE HYPERPARAMETER DICT ------------------------------------------------
 	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
-		HP_LIST = [json.loads(line) for line in fp.readlines()]
+		HP_LIST = [json.loads(line) for line in fp.readlines() if line != "\n"]
 	assert len(HP_LIST) > 0, "GOT EMPTY JSON FILE."
-	assert 0 <= args.row < len(HP_LIST), "OUT OF RANGE ROW ARGUMENT." #0-indexed
-	hyperparameters = HP_LIST[args.row]
+
+	# SEARCH BY ID
+	hp_list_indexed = {row['ID']:row for row in HP_LIST}
+	HP = hp_list_indexed[args.row]
 
 	#---------- GPU  ------------------------------------------------------------------------------
 	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
@@ -344,22 +376,23 @@ if __name__ == "__main__":
 		CUDA_DEV = torch.device("cpu")
 
 	#---------- INPUT BANDS -----------------------------------------------------------------------
-	assert HP['BANDS'] in [3,4],"INCORRECT NR. of BANDS IN JSON HYPERPARAMETER FILE."
-	input_bands = HP['BANDS']
+	assert HP['BANDS'] in [3,4],"INCORRECT BAND NR IN JSON HYPERPARAMETER FILE."
+	n_bands = HP['BANDS']
 
 	#---------- OUTPUT CHANNELS -------------------------------------------------------------------
-	assert HP['OUTPUTS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HYPERPARAMETER FILE."
+	assert HP['OUTPUTS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HP FILE."
 	n_classes = HP['OUTPUTS'] 
 
 	#---------- MODEL -----------------------------------------------------------------------------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["vits","unet"], "INCORRECT MODEL STRING."
 	if model_str == 'unet':
-		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={input_bands})")
+		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
 	if model_str == 'vits':
-		net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={input_bands})")
+		net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
+
 	# TO GPU
-	net = net.to(CUDA_DEV) #checked above
+	net = net.to(CUDA_DEV)
 	net = torch.compile(net)
 
 	#---------- LOSS ------------------------------------------------------------------------------
@@ -372,13 +405,18 @@ if __name__ == "__main__":
 		loss_fn = None
 
 	#---------- OPTIMIZER -------------------------------------------------------------------------
+	assert HP["LEARNING_RATE"] in [0.0001,0.00025,0.0005,0.00075,0.001],"LR OUT OF RANGE."
 	assert HP["OPTIM"] in ["adam","sgd","adamw"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
+
 	if HP['OPTIM'] == "adam":
 		optimizer = torch.optim.Adam(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == "sgd":
 		optimizer = torch.optim.SGD(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == 'adamw':
-		optimizer = torch.optim.AdamW(net.parameters(),lr=HP['LEARNING_RATE'])
+		assert "DECAY" in HP, "DECAY UNDEFINED FOR ADAMW RUN."
+		assert HP["DECAY"] in [0.01,0.001,0.0001,0.00001,0.000001], "DECAY OUT OF RANGE."
+		optimizer = torch.optim.AdamW(net.parameters(),lr=HP['LEARNING_RATE'],
+			weight_decay=HP["DECAY"])
 
 	#---------- LEARNING RATE SCHEDULER ------------------------------------------------------------
 	assert HP["SCHEDULER"] in ["step","exp","none"] #making it overly explicit for logs/results
@@ -393,7 +431,7 @@ if __name__ == "__main__":
 	scaler = torch.amp.GradScaler("cuda",enabled=True)
 
 	#---------- SET ALL SEEDS ----------------------------------------------------------------------
-	assert HP['SEED'] in (0,1), "INCORRECT SEED IN JSON PARAMETER DICT."
+	assert HP['SEED'] in (0,1), "INCORRECT SEED VALUE IN JSON PARAMETER DICT."
 	if HP['SEED'] == True:
 		utils.set_seed(476)
 
@@ -404,12 +442,12 @@ if __name__ == "__main__":
 	])
 
 	tr_dataset = dload.SentinelDataset(f"{DATA_DIR}/training",
-		n_bands=input_bands,
+		n_bands=n_bands,
 		n_labels=n_classes,
 		transform=transform)
 
 	va_dataset = dload.SentinelDataset(f"{DATA_DIR}/validation",
-		n_bands=input_bands,
+		n_bands=n_bands,
 		n_labels=n_classes,
 		transform=None)
 

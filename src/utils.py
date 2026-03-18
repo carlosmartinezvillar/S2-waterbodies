@@ -112,7 +112,7 @@ class ConfusionMatrix():
 				i = k // n_classes
 				j = k % n_classes
 
-				self.M[i,j] += ((T==i) & (Y==j)).sum()
+				self.M[i,j] += ((T==i) & (Y==j)).sum() #this is reversed from above!
 
 				self.TP = self.M.diagonal()
 				self.FP = self.M.sum(axis=0) - self.TP

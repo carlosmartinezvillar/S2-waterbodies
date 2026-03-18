@@ -15,11 +15,11 @@ parser.add_argument('--clear',required=False,action='store_true',help='Delete jo
 args = parser.parse_args()
 
 #launch via kubectl
-def launch_jobs(template_path,hp_list,start,end):
+def launch_jobs(template_path,job_nrs):
 	'''
-	Opens a template YAML for the job. For each number in the range of [start,end) launches a
-	kubernetes job. Each job is named to match the model id listed in the hyperparameter json
-	file.
+	Opens a template YAML and launches a kubernetes job for each number in [start,end).
+	Each job is named according to this number and matches the model id listed in the json
+	file of hyperparameters.
 	'''
 
 	#base template
@@ -30,12 +30,11 @@ def launch_jobs(template_path,hp_list,start,end):
 	old_job_str = obj['metadata']['name']
 	old_cmd_str = obj['spec']['template']['spec']['containers'][0]['args'][0]
 
-	for row in range(start-1,end):
+	for model_id in job_nrs:
 
 		#SET THE NEW STRINGS FOR THIS ROW
-		model_id = hp_list[row]['ID'] #GET ID in json row
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
-		new_cmd_str = old_cmd_str.replace('--row 0;',f'--row {row};')
+		new_cmd_str = old_cmd_str.replace('--row 0;',f'--row {model_id};') #let train.py search
 
 		#ASSIGN NEW STRINGS TO OBJECT
 		obj['metadata']['name'] = new_job_str
@@ -85,8 +84,11 @@ def clear_jobs(start,end):
 			del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
 			print(del_out.stdout)
 
+
 if __name__ == '__main__':
-	if args.clear is True: #do this and nothing else.
+
+	# CLEAN JOBS AND EXIT
+	if args.clear is True:
 		print("CLEARING JOBS...")
 		clear_jobs(args.start,args.end)
 		sys.exit(1)
@@ -98,7 +100,7 @@ if __name__ == '__main__':
 	assert args.params is not None, "(kjobs.py): No JSON given."
 	assert os.path.isfile(args.params), "(kjobs.py): INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
-		HP_LIST = [json.loads(l) for l in fp.readlines()]
+		HP_LIST = [json.loads(l) for l in fp.readlines() if l!="\n"]
 	N = len(HP_LIST)
 	assert N > 0, "kjobs.py: GOT EMPTY JSON FILE."
 
@@ -106,16 +108,19 @@ if __name__ == '__main__':
 	assert args.start is not None, "(kjobs.py): GOT NONE FOR START ROW"
 	assert args.start >= 1, "(kjobs.py): GOT INDEX <1"
 	assert args.end is not None, "(kjobs.py): GOT NONE FOR END ROW"
-	assert args.end <= N, "(kjobs.py): END INDEX OUT OF RANGE"
+	assert args.end < 999, "(kjobs.py): GOT A VERY LARGE END NUMBER" 
 	assert args.end >= args.start, "(kjobs.py): END ROW < START ROW"
 
-	#SET
-	start_index = args.start
-	if args.end < N:
-		end_index = args.end
-	else:
-		end_index = N #for range(start,end) one-indexed now.
+	#SET -- APPEND AS MANY ROWS AS FOUND IN RANGE
+	all_ids   = [row['ID'] for row in HP_LIST]
+	job_queue = []
+	for i in range(args.start,args.end+1,1):
+		if i in all_ids:
+			job_queue.append(i)
 
+	if len(job_queue) == 0:
+		print("(kjobs.py): EMPTY JOB QUEUE. EXITING.")
+		sys.exit(1)
 
 	#RUN
-	launch_jobs(args.spec,HP_LIST,start_index,end_index)
+	launch_jobs(args.spec,job_queue)
