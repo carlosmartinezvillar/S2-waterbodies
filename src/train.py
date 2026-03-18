@@ -77,11 +77,11 @@ def update_confusion_matrix(gpu_mat,Y,T):
 	# confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
 	# confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
 	# confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
-
-	for k in range(gpu_mat.size(0)*gpu_mat.size(0)):
-		i = k // gpu_mat.size(0) #row
-		j = k % gpu_mat.size(0) #col
-		confmat[i,j] += ((T==i) & (Y==j)).sum()
+	with torch.no_grad():
+		for k in range(gpu_mat.size(0)*gpu_mat.size(0)):
+			i = k // gpu_mat.size(0) #row
+			j = k % gpu_mat.size(0) #col
+			confmat[i,j] += ((T==i) & (Y==j)).sum()
 
 
 
@@ -203,11 +203,11 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 	N_va = len(dataloaders['validation'].dataset)
 	# log_file_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
 	log_file_header = ["tloss","vloss"]
-	log_file_header += [f"tacc{c}" for c in n_classes]
-	log_file_header += [f"vacc{c}" for c in n_classes]
-	log_file_header += [f"vtpr{c}" for c in n_classes]
-	log_file_header += [f"vppv{c}" for c in n_classes]
-	log_file_header += [f"viou{c}" for c in n_classes]	
+	log_file_header += [f"tacc{c}" for c in range(n_classes)]
+	log_file_header += [f"vacc{c}" for c in range(n_classes)]
+	log_file_header += [f"vtpr{c}" for c in range(n_classes)]
+	log_file_header += [f"vppv{c}" for c in range(n_classes)]
+	log_file_header += [f"viou{c}" for c in range(n_classes)]	
 
 	log_file_path   = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'
 	logger     = utils.Logger(log_file_path,log_file_header)
@@ -333,11 +333,11 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 
 		# RESULTS
 		epoch_result = [loss_tr,loss_va]
-		epoch_result += [tr_acc[i] for i in n_classes]
-		epoch_result += [va_acc[i] for i in n_classes]
-		epoch_result += [va_tpr[i] for i in n_classes]
-		epoch_result += [va_ppv[i] for i in n_classes]
-		epoch_result += [va_iou[i] for i in n_classes]
+		epoch_result += [tr_acc[i] for i in range(n_classes)]
+		epoch_result += [va_acc[i] for i in range(n_classes)]
+		epoch_result += [va_tpr[i] for i in range(n_classes)]
+		epoch_result += [va_ppv[i] for i in range(n_classes)]
+		epoch_result += [va_iou[i] for i in range(n_classes)]
 		# epoch_result +=[loss_tr,loss_va,va_acc[-1],va_tpr[-1],va_ppv[-1],va_iou[-1]]
 		# va_mIoU = va_iou.mean() etc.
 		logger.log(epoch_result)
