@@ -7,7 +7,7 @@ import random
 import time
 from tqdm import tqdm
 import argparse
-import jsonw
+import json
 from functools import wraps
 
 import utils
