@@ -17,8 +17,8 @@ args = parser.parse_args()
 #launch via kubectl
 def launch_jobs(template_path,job_nrs):
 	'''
-	Opens a template YAML and launches a kubernetes job for each number in [start,end).
-	Each job is named according to this number and matches the model id listed in the json
+	Opens a template YAML and launches a kubernetes job for each number in job_nrs.
+	Each job is named according to this number and matches a model id listed in the json
 	file of hyperparameters.
 	'''
 

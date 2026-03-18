@@ -205,55 +205,63 @@ def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	return HP
 
 
-def sequence_hyperparameters(file_path):
+def sequence_hyperparameters(out_file_path,id_start):
 	'''
 	Create a list of dict elements each containing a model's hyperparameters.
-	The list is stored in out_path in .json format and created using the 
-	'cross-product' (all-by-all) of the parameters provided.
+	The list is stored in out_path in .json format and created using a 
+	cross-product (all-by-all) of the parameters provided.
 	'''
-	assert os.path.isfile(file_path), "INCORRECT JSON FILE PATH"
-	with open(file_path,'r') as fp:
-		HP_PREV = json.load(fp)
+	# assert not os.path.isfile(out_file_path), "OVERWRITING ALREADY EXISITING JSON FILE."
+	# with open(file_path,'r') as fp:
+		# HP_PREV = json.load(fp)
 
 
 	# Each parameter
-	seed  = [1]
-	lrate = [0.1,0.01,0.001,0.0001]	
-	sched = ["step","exp"]
-	optim = ["adam"]
-	loss  = ["ce"]
-	# loss  = ["ce","ew","cw"] #Cross-entropy,edge-weighted,class-weighted
-	batch = [16,32,64]
-	init  = ["random"]
-	# init  = ["potsdam","random"] #Resnet weights adjusted or sqrt(2/n_l) (He et al.)
-	bands = ["rgb","vnir"]
-	model = ["unet1_1"]
-	# model   = ["unet1_1","unet1_2","unet1_3","unet1_4","unet2_1","unet2_2","unet2_3","unet2_4",
-	# 	"unet3_1","unet4_1","unet4_2","unet4_3","unet4_4","unet5_1","unet5_2","unet5_3",
-	# 	"unet5_4","unet6_1"]
-
-
+	seeds = [1]	
+	epoch = [50]
+	lrate = [0.0001,0.00025,0.0005,0.00075,0.001]	
+	sched = ["none"]
+	optim = ["adamw"]
+	decay = [0.01,0.001,0.0001,0.00001]
+	loss  = ["ce"]	
+	batch = [16,32]
+	inits = ["random"]
+	bands = ["rgb"]
+	label = [2]
+	model = ["unet2_1","unet2_2","unet2_4",
+		"unet3_1",
+		"unet5_1","unet5_2","unet5_4",
+		"unet6_1"]
 
 	# Cross-product
-	hp = list(itertools.product(seed,lrate,sched,optim,loss,batch,init,bands,model))
+	hp = list(itertools.product(seeds,epoch,lrate,sched,optim,decay,loss,batch,inits,bands,label,model))
 	HP_NEW = []
 
-	for i in range(len(hp0)):
+	for i in range(len(hp)):
 		row_dict = {}
-		row_dict['ID'] = i+id_start
-		row_dict['SEED']          = hp[i][0]
-		row_dict['LEARNING_RATE'] = hp[i][1]
-		row_dict['SCHEDULER']     = hp[i][2]
-		row_dict['OPTIM']         = hp[i][3]
-		row_dict['LOSS']          = hp[i][4]
-		row_dict['BATCH']         = hp[i][5]
-		row_dict['INIT']          = hp[i][6]
-		row_dict['BANDS']         = hp[i][7]
-		row_dict['MODEL']         = hp[i][8]
-		
-		HP_NEW.append(d)
+		row_dict["ID"]            = i+id_start
+		row_dict["SEED"]          = hp[i][0]
+		row_dict["EPOCHS"]        = hp[i][1]		
+		row_dict["LEARNING_RATE"] = hp[i][2]
+		row_dict["SCHEDULER"]     = hp[i][3]
+		row_dict["OPTIM"]         = hp[i][4]
+		row_dict["DECAY"]         = hp[i][5]
+		row_dict["LOSS"]          = hp[i][6]
+		row_dict["BATCH"]         = hp[i][7]
+		row_dict["INIT"]          = hp[i][8]
+		row_dict["BANDS"]         = hp[i][9]
+		row_dict["OUTPUTS"]       = hp[i][10]
+		row_dict["MODEL"]         = hp[i][11]
+		HP_NEW.append(row_dict)
 
-	return HP
+	with open(out_file_path,'w') as fp:
+		for line in HP_NEW:
+			# fp.write(str(line))
+			# fp.write('\n')
+			json.dump(line,fp)
+			fp.write('\n')
+	print(f"Parameter file written to {out_file_path}")
+
 
 
 def set_seed(seed,cuda=True):
@@ -270,47 +278,53 @@ def set_seed(seed,cuda=True):
 ####################################################################################################
 if __name__ == "__main__":
 
-	#TEST CONFUSION MATRIX
-	print("TESTING CONFUSION MATRIX")
+	# #TEST CONFUSION MATRIX
+	# print("TESTING CONFUSION MATRIX")
 
-	#CHECK CONFUSION MATRIX
-	#check 2-way classification
-	y0 = np.array([
-		[0,0,0,0,0],
-		[0,0,1,1,1],
-		[0,0,1,1,1],
-		[0,0,0,0,0],
-		[0,0,0,0,0]])
+	# #CHECK CONFUSION MATRIX
+	# #check 2-way classification
+	# y0 = np.array([
+	# 	[0,0,0,0,0],
+	# 	[0,0,1,1,1],
+	# 	[0,0,1,1,1],
+	# 	[0,0,0,0,0],
+	# 	[0,0,0,0,0]])
 
-	t0 = np.array([
-		[0,0,0,0,0],
-		[0,0,0,0,0],
-		[0,1,1,0,0],
-		[0,1,1,0,0],
-		[0,0,0,0,0]])
-	cm2 = ConfusionMatrix(n_classes=2)
+	# t0 = np.array([
+	# 	[0,0,0,0,0],
+	# 	[0,0,0,0,0],
+	# 	[0,1,1,0,0],
+	# 	[0,1,1,0,0],
+	# 	[0,0,0,0,0]])
+	# cm2 = ConfusionMatrix(n_classes=2)
 
-	# for i in range(1000):
-	cm2.update(y0,t0)
-	cm2
+	# # for i in range(1000):
+	# cm2.update(y0,t0)
+	# cm2
 
-	#another check for 3-way classification
-	#from array [B,C,x,y] after argmax axis=1, [B,x,y]
-	y0 = np.array([[
-		[0,0,0,2,2],
-		[0,1,2,2,2],
-		[0,0,1,2,0],
-		[0,0,0,1,0],
-		[0,0,0,0,0]]])
+	# #another check for 3-way classification
+	# #from array [B,C,x,y] after argmax axis=1, [B,x,y]
+	# y0 = np.array([[
+	# 	[0,0,0,2,2],
+	# 	[0,1,2,2,2],
+	# 	[0,0,1,2,0],
+	# 	[0,0,0,1,0],
+	# 	[0,0,0,0,0]]])
 		
-	t0 = np.array([[
-		[0,1,2,2,2],
-		[0,1,2,2,2],
-		[0,0,1,2,2],
-		[0,0,0,1,1],
-		[0,0,0,0,0]]])
+	# t0 = np.array([[
+	# 	[0,1,2,2,2],
+	# 	[0,1,2,2,2],
+	# 	[0,0,1,2,2],
+	# 	[0,0,0,1,1],
+	# 	[0,0,0,0,0]]])
 
-	cm3 = ConfusionMatrix(n_classes=3)
-	# for i in range(1000):
-	cm3.update(y0,t0)
-	cm3
+	# cm3 = ConfusionMatrix(n_classes=3)
+	# # for i in range(1000):
+	# cm3.update(y0,t0)
+	# cm3
+
+	sequence_hyperparameters("../hpo/test.json",id_start=101)
+
+	# with open("../hpo/test.json") as fp:
+		# HP_LIST = [json.loads(line) for line in fp.readlines() if line != "\n"]
+	# line = HP_LIST[0]
