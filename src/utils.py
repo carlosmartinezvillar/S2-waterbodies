@@ -188,7 +188,6 @@ def save_ddp_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 	torch.save(checkpoint,save_path)
 
 
-
 def load_checkpoint(path,model,optim):
 	checkpoint = torch.load(path,weights_only=False)
 	model.load_state_dict(checkpoint['model_state_dict'])
@@ -226,7 +225,7 @@ def sequence_hyperparameters(out_file_path,id_start):
 	loss  = ["ce"]	
 	batch = [16,32]
 	inits = ["random"]
-	bands = ["rgb"]
+	bands = [3]
 	label = [2]
 	model = ["unet2_1","unet2_2","unet2_4",
 		"unet3_1",
@@ -261,7 +260,6 @@ def sequence_hyperparameters(out_file_path,id_start):
 			json.dump(line,fp)
 			fp.write('\n')
 	print(f"Parameter file written to {out_file_path}")
-
 
 
 def set_seed(seed,cuda=True):
@@ -323,7 +321,7 @@ if __name__ == "__main__":
 	# cm3.update(y0,t0)
 	# cm3
 
-	sequence_hyperparameters("../hpo/test.json",id_start=101)
+	sequence_hyperparameters("../hpo/new_params.json",id_start=101)
 
 	# with open("../hpo/test.json") as fp:
 		# HP_LIST = [json.loads(line) for line in fp.readlines() if line != "\n"]
