@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+all_models = [
+	"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
+	"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
+	"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
+
 ##############################
 #INPUT AND OUTPUT LAYERS
 ##############################
@@ -1388,12 +1393,6 @@ def print_model_parameters(model_str):
 		print(f"{name:<20}\t{count:>10}\t{shape}")
 	print("-"*80)
 	print(f"{'TOTAL'.ljust(20)}\t{P_sum:>10}")
-
-
-all_models = [
-	"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
-	"UNet2_4","UNet3_1","UNet4_1","UNet4_2","UNet4_3","UNet4_4","UNet5_1",
-	"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
 
 
 if __name__ == '__main__':
