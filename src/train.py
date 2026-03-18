@@ -201,7 +201,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 
 	N_tr = len(dataloaders['training'].dataset)
 	N_va = len(dataloaders['validation'].dataset)
-	# log_file_header = ["tloss","t_acc","vloss","v_acc","v_tpr","v_ppv","v_iou"]
 	log_file_header = ["tloss","vloss"]
 	log_file_header += [f"tacc{c}" for c in range(n_classes)]
 	log_file_header += [f"vacc{c}" for c in range(n_classes)]
@@ -266,6 +265,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 
 			# progress bar
 			t.update(1)
+			t.refresh()
 		t.close()
 
 		#SCHEDULER UPDATE
@@ -347,7 +347,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		if best_iou < epoch_iou:
 			best_iou   = epoch_iou
 			best_epoch = epoch
-			utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
+			utils.save_checkpoint(MODEL_DIR,model,optimizer,scaler,epoch,loss_tr,loss_va,best=True)
 
 	print(f'Best validation IoU: {best_iou:.5f} -- Epoch {best_epoch}')
 

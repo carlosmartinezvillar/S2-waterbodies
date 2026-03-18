@@ -153,7 +153,7 @@ class ConfusionMatrix():
 # FUNCTIONS
 ####################################################################################################
 
-def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
+def save_checkpoint(path,model,optim,scaler,epoch,t_loss,v_loss,best=False):
 	'''
 	Saves model+optim+scaler state as .pth.tar 
 	'''
@@ -171,7 +171,7 @@ def save_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
 	torch.save(checkpoint,save_path)
 
 
-def save_ddp_checkpoint(path,model,optim,epoch,t_loss,v_loss,best=False):
+def save_ddp_checkpoint(path,model,optim,scaler,epoch,t_loss,v_loss,best=False):
 	'''
 	Saves model+optim+scaler state. References module within DDP wrapper.
 	'''
