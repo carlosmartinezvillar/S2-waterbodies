@@ -222,13 +222,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		# Time
 		epoch_start_time = time.time()
 		print(f'\nEpoch {epoch}/{epochs-1}')
-		print('-'*80)
+		print('-'*80,flush=True)
 
 		############################################################
 		# TRAINING
 		############################################################
 		# LOGS
 		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
+		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
 		loss_sum_tr   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_tr = torch.zeros(1,device=CUDA_DEV)
 
@@ -285,6 +286,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		############################################################
 		# LOGS
 		t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
+		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
 		loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_va = torch.zeros(1,device=CUDA_DEV)
 
@@ -303,18 +305,17 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 					loss   = loss_fn(output,T)
 				Y_soft,Y   = torch.max(output,1) #soft-prediction, hard-prediction
 
-				# METRICS
+				# METRICS -- Loss
 				loss_sum_va   += loss.detach() * X.size(0)
 				sample_sum_va += X.size(0)
 
+				# METRICS -- Confusion matrix
 				gpu_mat_va[0,0] += ((T==0) & (Y==0)).sum() #TN
 				gpu_mat_va[0,1] += ((T==0) & (Y==1)).sum() #FP
 				gpu_mat_va[1,0] += ((T==1) & (Y==0)).sum() #FN
 				gpu_mat_va[1,1] += ((T==1) & (Y==1)).sum() #TP water
 
-
-				t.update(1)
-			# t.set_postfix(loss='{:05.5f}'.format(loss_sum_va/samples_ran))		
+				t.update(1)		
 		t.close()
 
 		# VALIDATION METRICS FOR LOG
@@ -383,6 +384,11 @@ if __name__ == "__main__":
 	assert HP['OUTPUTS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HP FILE."
 	n_classes = HP['OUTPUTS'] 
 
+	#---------- SET ALL SEEDS ----------------------------------------------------------------------
+	assert HP['SEED'] in (0,1), "INCORRECT SEED VALUE IN JSON PARAMETER DICT."
+	if HP['SEED'] == True:
+		utils.set_seed(476)
+
 	#---------- MODEL -----------------------------------------------------------------------------
 	model_str = HP['MODEL'][0:4]
 	assert model_str in ["vits","unet"], "INCORRECT MODEL STRING."
@@ -429,11 +435,6 @@ if __name__ == "__main__":
 
 	#----------- AUTOMATIC MIXED PRECISION ---------------------------------------------------------
 	scaler = torch.amp.GradScaler("cuda",enabled=True)
-
-	#---------- SET ALL SEEDS ----------------------------------------------------------------------
-	assert HP['SEED'] in (0,1), "INCORRECT SEED VALUE IN JSON PARAMETER DICT."
-	if HP['SEED'] == True:
-		utils.set_seed(476)
 
 	#---------- DATALOADERS ------------------------------------------------------------------------
 	transform = v2.Compose([
