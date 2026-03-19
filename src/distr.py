@@ -114,6 +114,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
         log_file_header += [f"viou{c}" for c in range(n_classes)]   
         log_file_path = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'   
         logger        = utils.Logger(log_file_path,log_file_header)
+        total_time_start = time.time()
 
     best_iou   = 0.0
     best_epoch = 0
@@ -215,6 +216,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
                 # METRICS -- Confusion matrix
                 update_confusion_matrix(gpu_mat_va,T,Y,n_classes)
 
+        # SYNC GPUS
         ddp_reduce_sum(loss_sum_va)
         ddp_reduce_sum(sample_sum_va)
         dpp_reduce_sum(gpu_mat_va)
@@ -262,6 +264,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
                 best_epoch = epoch
                 utils.save_ddp_checkpoint(MODEL_DIR,model,optimizer,scaler,epoch,loss_tr,loss_va,best=True)        
 
+            print(f'Best validation IoU: {best_iou:.5f} -- Epoch {best_epoch}')
+            total_time = time.time() - total_time_start
+            print(f'TOTAL TRAINING TIME: {total_time:.2f}s')
 
 
 def ddp_worker(rank,world_size,HP):

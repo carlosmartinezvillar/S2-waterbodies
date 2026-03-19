@@ -1,6 +1,3 @@
-############################################
-#DDP TRAIN ON TWO CONTAINERS IN A SINGLE POD
-############################################
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,30 +8,22 @@ spec:
     spec:
 
       containers:
-        - name: train-box-0
+        - name: train-box
           image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
           imagePullPolicy: IfNotPresent
-
           ports:
-            - containerPort: 8080
-          env:
-            - name: NCCL_SOCKET_IFNAME
-              value: eth0
-            - name: MASTER_ADDR
-              value: localhost
-            - name: MASTER_PORT
-              value: 8080
-
+            - containerPort: 12355
+            
           resources:
             limits:
-              memory: 16G
-              cpu: 8
-              nvidia.com/gpu: 1
+              memory: 24G
+              cpu: 6
+              nvidia.com/gpu: 2
               ephemeral-storage: 20G
             requests:
-              memory: 8G
-              cpu: 4
-              nvidia.com/gpu: 1
+              memory: 16G
+              cpu: 6
+              nvidia.com/gpu: 2
               ephemeral-storage: 20G
 
           volumeMounts:
@@ -61,43 +50,9 @@ spec:
             mkdir /cache/model;
             mkdir /cache/logs;
             cd S2-waterbodies/src;
-            python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
+            python3 distr.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
             cp /cache/model/*.pth.tar /model_pvc;
             cp /cache/logs/*.tsv /log_pvc;
-
-        - name: train-box-1
-          image: docker.io/cimartinezvillar/dcnn-pytorch:cuda12.4base-ubuntu22.04
-          imagePullPolicy: IfNotPresent
-
-          env:
-            - name: MASTER_ADDR
-              value: localhost
-            - name: MASTER_PORT
-              value: 8080
-
-          resources:
-            limits:
-              memory: 16G
-              cpu: 8
-              nvidia.com/gpu: 1
-              ephemeral-storage: 20G
-            requests:
-              memory: 8G
-              cpu: 4
-              nvidia.com/gpu: 1
-              ephemeral-storage: 20G
-
-          volumeMounts:
-            - mountPath: /cache
-              name: cache-vol
-
-            - mountPath: /dev/shm
-              name: dshm              
-
-          command: ["/bin/sh","-c"]
-          args:
-          - git clone https://github.com/carlosmartinezvillar/S2-waterbodies.git;
-            python3 train.py --data-dir /cache/chips_sorted --net-dir /cache/model --log-dir /cache/logs --params ../hpo/params.json --row 0;
 
       volumes:
       - name: cache-vol
@@ -107,7 +62,8 @@ spec:
 
       - name: zipped-vol
         persistentVolumeClaim:
-          claimName: lake-chips-sorted
+          claimName: lake-chips-sorted #6.8G uncompressed
+          # claimName: lake-chips-sorted-512 #25G uncompressed
 
       - name: log-vol
         persistentVolumeClaim:
@@ -129,14 +85,14 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                - key: topology.kubernetes.io/region
-                  operator: In
-                  values:
-                  - us-central  
+                # - key: topology.kubernetes.io/region
+                  # operator: In
+                  # values:
+                  # - us-central  
                 - key: nvidia.com/gpu.product
                   operator: In
                   values:
-                  # - NVIDIA-GeForce-RTX-3090
-                  - Tesla-V100-PCIE-16GB
+                  - NVIDIA-GeForce-RTX-3090
+                  # - Tesla-V100-PCIE-16GB
 
-  backoffLimit: 1
+  backoffLimit: 0
