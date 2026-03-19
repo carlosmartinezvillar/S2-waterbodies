@@ -15,7 +15,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.distributed import init_process_group, destroy_process_group
+# from torch.distributed import init_process_group, destroy_process_group
 
 ####################################################################################################
 # SET GLOBAL VARS FROM ENV OR ARGS
@@ -42,18 +42,11 @@ args = parser.parse_args()
 DATA_DIR  = args.data_dir
 LOG_DIR   = args.log_dir
 MODEL_DIR = args.net_dir
-CUDA_DEV  = None
 
 
 ####################################################################################################
 # SOME HELPER FUNCTIONS
 ####################################################################################################
-def ddp_reduce_confmat(confmat):
-    if dist.is_available() and dist.is_initialized():
-        dist.all_reduce(confmat, op=dist.ReduceOp.SUM)
-    return confmat
-
-
 def calculate_metrics(confmat):
     '''
     Calculate precision, recall, accuracy, and IoU for a 
@@ -74,83 +67,210 @@ def calculate_metrics(confmat):
 
     return ppv,tpr,acc,iou
 
-
-def update_confusion_matrix(gpu_mat,Y,T):
+@torch.no_grad()
+def update_confusion_matrix(confmat,T,Y,n_classes):
     '''
     Update a confusion matrix tensor in gpu. Per-pixel classification.
     '''
-    # confmat[0,0] += ((T==0) & (Y==0)).sum() #TN  #<--- change this to modulo op for more classes
+    # confmat[0,0] += ((T==0) & (Y==0)).sum() #TN  #<--- this in modulo op below
     # confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
     # confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
     # confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
 
-    for k in range(gpu_mat.size(0)*gpu_mat.size(0)):
-        i = k // gpu_mat.size(0) #row
-        j = k % gpu_mat.size(0) #col
+    for k in range(n_classes*n_classes):
+        i = k // n_classes #row
+        j = k % n_classes #col
         confmat[i,j] += ((T==i) & (Y==j)).sum()
 
 
+def ddp_reduce_sum(tensor):
+    dist.all_reduce(tensor,op=dist.ReduceOp.SUM)
+    return tensor
+
+
+def total_time_decorator(orig_func):
+    @wraps(orig_func)
+    def wrapper(*args, **kwargs):
+        total_time_start = time.time()
+        orig_func(*args,**kwargs)
+        total_time = time.time() - total_time_start
+        print(f'TOTAL TRAINING TIME: {total_time:.2f}s')
+
+    return wrapper
 
 ####################################################################################################
 # TRAININING+VALIDATION
 ####################################################################################################
-def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=50,n_classes=2,my_rank):
+def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n_classes=2,device):
 
-    N_tr = len(dataloaders['training'].dataset)
-    N_va = len(dataloaders['validation'].dataset)
-    log_file_header = ["tloss","vloss"]
-    log_file_header += [f"tacc{c}" for c in range(n_classes)]
-    log_file_header += [f"vacc{c}" for c in range(n_classes)]
-    log_file_header += [f"vtpr{c}" for c in range(n_classes)]
-    log_file_header += [f"vppv{c}" for c in range(n_classes)]
-    log_file_header += [f"viou{c}" for c in range(n_classes)]   
-    
-    log_file_path = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'   
-    logger        = utils.Logger(log_file_path,log_file_header)
-    best_iou   = 0.0 # <--- probably needs tensor for reduceop
+    scaler = torch.amp.GradScaler("cuda",enabled=True)
+
+    if dist.get_rank()==0:
+        log_file_header = ["tloss","vloss"]
+        log_file_header += [f"tacc{c}" for c in range(n_classes)]
+        log_file_header += [f"vacc{c}" for c in range(n_classes)]
+        log_file_header += [f"vtpr{c}" for c in range(n_classes)]
+        log_file_header += [f"vppv{c}" for c in range(n_classes)]
+        log_file_header += [f"viou{c}" for c in range(n_classes)]   
+        log_file_path = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'   
+        logger        = utils.Logger(log_file_path,log_file_header)
+
+    best_iou   = 0.0
     best_epoch = 0
 
-    # dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
     for epoch in range(epochs):
 
         # Confusion matrices in GPU
-        gpu_mat_tr = torch.zeros((n_classes,n_classes),device=CUDA_DEV,dtype=torch.int64) 
-        gpu_mat_va = torch.zeros((n_classes,n_classes),device=CUDA_DEV,dtype=torch.int64)
+        gpu_mat_tr = torch.zeros((n_classes,n_classes),device=device,dtype=torch.int64) 
+        gpu_mat_va = torch.zeros((n_classes,n_classes),device=device,dtype=torch.int64)
 
         # Time
-        if my_rank == 0:
+        if dist.get_rank() == 0:
             epoch_start_time = time.time()
             print(f'\nEpoch {epoch}/{epochs-1}')
-            print('-'*80)
-
-        # SHUFFLE
-         dataloaders['training'].sampler.set_epoch(epoch) 
+            print('-'*80,flush=True)
 
         ############################################################
         # TRAINING
         ############################################################
-        
+        # SHUFFLE
+        dataloaders['training'].sampler.set_epoch(epoch) 
+        loss_sum_tr = torch.zeros(1,device=device)
+
+        model.train()
+        for X,T in dataloaders['training']:
+
+            #TO DEV
+            X = X.to(device,non_blocking=True)
+            T = T.to(device,non_blocking=True)
+
+            # FORWARD
+            with torch.autocast(device_type="cuda", dtype=torch.float16,enabled=True):
+                output = model(X)
+                loss   = loss_fn(output,T)
+
+            # BACKPROP
+            optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+
+            # METRICS -- Loss
+            loss_sum_tr   += loss.detach() * X.size(0)
+            sample_sum_tr += X.size(0)
+
+            # METRICS -- Confusion matrix in gpu
+            Y = output.detach().argmax(axis=1) #keep detach if needed to switch to .max()
+            T = T.detach()
+            update_confusion_matrix(gpu_mat_tr,T,Y,n_classes)                      
+
+
+        # SCHEDULER UPDATE
+        if scheduler is not None:
+            scheduler.step()
+
+        # ---- Sync GPUs ----
+        ddp_reduce_sum(loss_sum_tr)
+        ddp_reduce_sum(sample_sum_tr)
+        ddp_reduce_sum(gpu_mat_tr)
+
+        # TRAINING METRICS
+        loss_tr    = (loss_sum_tr/sample_sum_tr).item() #-----------CPU sync
+        cpu_mat_tr = gpu_mat_tr.cpu() #-----------------------------CPU sync
+        tr_ppv,tr_tpr,tr_acc,tr_iou = calculate_metrics(cpu_mat_tr) #tensors,result per class
+
+        if dist.get_rank() == 0:
+            print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f}',end='')
+            if n_classes > 2:
+                va_miou = va_iou.mean().item()
+                print(f' | mIoU: {va_miou:.5f}')
+            else:            
+                print(f' | IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
+
 
         ############################################################
         # VALIDATION
         ############################################################        
+        loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
+        sample_sum_va = torch.zeros(1,device=CUDA_DEV)
+
+        # LOOP
+        model.eval()
+        with torch.no_grad():
+            for X,T in dataloaders['validation']:
+
+                X = X.to(device,non_blocking=True)
+                T = T.to(device,non_blocking=True)
+
+                # FORWARD
+                with torch.autocast(device_type="cuda",dtype=torch.float16,enabled=True):
+                    output = model(X)
+                    loss   = loss_fn(output,T)
+                Y_soft,Y   = torch.max(output,1) #soft-prediction, hard-prediction
+
+                # METRICS -- Loss
+                loss_sum_va   += loss.detach() * X.size(0)
+                sample_sum_va += X.size(0)                               
+
+                # METRICS -- Confusion matrix
+                update_confusion_matrix(gpu_mat_va,T,Y,n_classes)
+
+        ddp_reduce_sum(loss_sum_va)
+        ddp_reduce_sum(sample_sum_va)
+        dpp_reduce_sum(gpu_mat_va)
+
+        # VALIDATION METRICS
+        loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
+        cpu_mat_va = gpu_mat_va.cpu() #---------------------------------sync
+        va_ppv,va_tpr,va_acc,va_iou = calculate_metrics(cpu_mat_va)
+
+        if dist.get_rank() == 0:
+            print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}',end='')
+            if n_classes > 2:
+                va_miou = va_iou.mean().item()
+                print(f' | mIoU: {va_miou:.5f}')
+            else:
+                print(f' | IoU_0: {va_iou[0]:.5f} | IoU_1: {va_iou[1]:.5f}')
+
 
         ############################################################
         # LOG AND CHECKPOINTS -- ONLY RANK 0
         ############################################################
-        if my_rank == 0 and epoch:
+        if dist.get_rank() == 0:
+
+            # EPOCH TIME
+            epoch_time = time.time() - epoch_start_time
+            print(f'\nEpoch time: {epoch_time:.2f}s')
+
+            # LOG RESULTS STRING
+            epoch_result = [loss_tr,loss_va]
+            epoch_result += [tr_acc[i] for i in range(n_classes)]
+            epoch_result += [va_acc[i] for i in range(n_classes)]
+            epoch_result += [va_tpr[i] for i in range(n_classes)]
+            epoch_result += [va_ppv[i] for i in range(n_classes)]
+            epoch_result += [va_iou[i] for i in range(n_classes)]
+            logger.log(epoch_result)
+
+            # SAVE MODEL
+            if n_classes > 2:
+                epoch_iou = va_miou #mIoU for 3+ classes
+            else:
+                epoch_iou = va_iou[1] #true label iou for 2 classes
 
             if best_iou < epoch_iou:
                 best_iou = epoch_iou
                 best_epoch = epoch
-                utils.save_ddp_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)        
+                utils.save_ddp_checkpoint(MODEL_DIR,model,optimizer,scaler,epoch,loss_tr,loss_va,best=True)        
 
-def main_ddp(rank,world_size,HP):
+
+
+def ddp_worker(rank,world_size,HP):
     #---------- SET UP DDP -------------------------------------------------------------------------
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"
+    dist.init_process_group(backend="nccl",rank=rank,world_size=world_size)
     torch.cuda.set_device(rank)
-    init_process_group(backend="nccl",rank=rank,world_size=world_size)
+    device = torch.device("cuda",rank)
 
     #---------- INPUT BANDS -----------------------------------------------------------------------
     assert HP['BANDS'] in [3,4],"INCORRECT BAND NR IN JSON HYPERPARAMETER FILE."
@@ -174,10 +294,10 @@ def main_ddp(rank,world_size,HP):
         net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
 
     # ---> TO EACH GPU
-    net = net.to(rank)
-    net = torch.compile(net)
+    net = net.to(device)
     net = torch.nn.SyncBatchNorm.convert_sync_batchnorm(net)
-    ddp_net = DDP(net,device_ids=[rank])
+    net = DDP(net,device_ids=[rank])
+    net = torch.compile(net)
 
     #---------- LOSS ------------------------------------------------------------------------------
     assert HP['LOSS'] in ["ce","ew","cw"], "INCORRECT STRING FOR LOSS IN DICT."
@@ -211,9 +331,6 @@ def main_ddp(rank,world_size,HP):
     if HP['SCHEDULER'] == "none":
         scheduler = None
 
-    #----------- AUTOMATIC MIXED PRECISION ---------------------------------------------------------
-    scaler = torch.amp.GradScaler("cuda",enabled=True)
-
     #---------- DATALOADERS ------------------------------------------------------------------------
     transform = v2.Compose([
         v2.RandomHorizontalFlip(p=0.5),
@@ -236,7 +353,7 @@ def main_ddp(rank,world_size,HP):
                 batch_size=HP['BATCH'],
                 drop_last=False,
                 shuffle=False,
-                sampler=DistributedSampler(tr_dataset),
+                sampler=DistributedSampler(tr_dataset,num_replicas=world_size,rank=rank),
                 num_workers=4,
                 pin_memory=True,
                 prefetch_factor=8),
@@ -245,26 +362,27 @@ def main_ddp(rank,world_size,HP):
                 batch_size=HP['BATCH'],
                 drop_last=False,
                 shuffle=False,
-                sampler=DistributedSampler(va_dataset),
+                sampler=DistributedSampler(va_dataset,num_replicas=world_size,rank=rank),
                 num_workers=4,
                 pin_memory=True,
                 prefetch_factor=8)
     }
 
     #---------- TRAINING --------------------------------------------------------------------------
-    train_and_validate_ddp(net,
+    train_and_validate_ddp(
+        net,
         dataloaders,
         optimizer,
         loss_fn,
-        scaler,
         scheduler,
         HP['EPOCHS'],
         n_classes,
-        rank
+        device
     )
 
     #---------- CLEAN UP DDP ----------------------------------------------------------------------
-    destroy_process_group()
+    dist.destroy_process_group()
+
 
 if __name__ == '__main__':
     #---------- LOAD HYPERPARAMETERS -------------------------------------------
@@ -275,8 +393,8 @@ if __name__ == '__main__':
 
     # SEARCH BY ID
     hp_list_indexed = {row['ID']:row for row in HP_LIST}
-    HP = hp_list_indexed[args.row]
+    HPS = hp_list_indexed[args.row]
 
     #---------- SPAWN PROCESSES ------------------------------------------------    
     world_size = 2
-    mp.spawn(main_ddp, args=(world_size,hyperparameters),nprocs=world_size)    
+    mp.spawn(setup_ddp, args=(world_size,HPS),nprocs=world_size)    

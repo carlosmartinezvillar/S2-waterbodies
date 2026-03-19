@@ -1,1 +1,0 @@
-[{"ID":0,"SEED":1,"LEARNING_RATE":0.1,"SCHEDULER":"exp","OPTIM":"adam","LOSS":"ce","BATCH":16,"INIT":"random","BANDS":"rgb","MODEL":"unet1_1"}]

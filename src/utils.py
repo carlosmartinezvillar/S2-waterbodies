@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import itertools
 import random
+import argparse
 
 ####################################################################################################
 # CLASSES
@@ -210,12 +211,7 @@ def sequence_hyperparameters(out_file_path,id_start):
 	The list is stored in out_path in .json format and created using a 
 	cross-product (all-by-all) of the parameters provided.
 	'''
-	# assert not os.path.isfile(out_file_path), "OVERWRITING ALREADY EXISITING JSON FILE."
-	# with open(file_path,'r') as fp:
-		# HP_PREV = json.load(fp)
-
-
-	# Each parameter
+	# Each parameter -- Trial 1
 	seeds = [1]	
 	epoch = [50]
 	lrate = [0.0001,0.00025,0.0005,0.00075,0.001]	
@@ -231,6 +227,48 @@ def sequence_hyperparameters(out_file_path,id_start):
 		"unet3_1",
 		"unet5_1","unet5_2","unet5_4",
 		"unet6_1"]
+
+	# # Each parameter -- Trial 2 No residuals
+	# seeds = [1]	
+	# epoch = [50]
+	# lrate = [0.0001]	
+	# sched = ["none"]
+	# optim = ["adamw"]
+	# decay = [0.01,0.001,0.0001,0.00001]
+	# loss  = ["ce"]	
+	# batch = [16]
+	# inits = ["random"]
+	# bands = [3]
+	# label = [2]
+	# model = ["unet1_2","unet1_4","unet4_2","unet4_4"] #try no residuals for best in trial 1
+
+	# Each parameter -- Trial 3 RGB+NIR
+	# seeds = [1]	
+	# epoch = [50]
+	# lrate = [0.0001,0.00025,0.0005] #?	
+	# sched = ["none"]
+	# optim = ["adamw"]
+	# decay = [0.01,0.001,0.0001,0.00001] #?
+	# loss  = ["ce"]	
+	# batch = [16,32] #?
+	# inits = ["random"]
+	# bands = [4]
+	# label = [2]
+	# model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
+
+	# Each parameter -- Trial 4 Best unseeded 100 epochs
+	# seeds = [1]	
+	# epoch = [50]
+	# lrate = [0.0001,0.00025,0.0005] #?	
+	# sched = ["none"]
+	# optim = ["adamw"]
+	# decay = [0.01,0.001,0.0001,0.00001] #?
+	# loss  = ["ce"]	
+	# batch = [16,32] #?
+	# inits = ["random"]
+	# bands = [4]
+	# label = [2]
+	# model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
 
 	# Cross-product
 	hp = list(itertools.product(seeds,epoch,lrate,sched,optim,decay,loss,batch,inits,bands,label,model))
@@ -275,6 +313,12 @@ def set_seed(seed,cuda=True):
 
 ####################################################################################################
 if __name__ == "__main__":
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--hpo",required=False,default=None,
+		help="Create a JSON file with a combination of hyperparameters.")
+	args = parser.parse_args()
+
 
 	# #TEST CONFUSION MATRIX
 	# print("TESTING CONFUSION MATRIX")
@@ -321,7 +365,11 @@ if __name__ == "__main__":
 	# cm3.update(y0,t0)
 	# cm3
 
-	sequence_hyperparameters("../hpo/new_params.json",id_start=101)
+	# python3 utils.py --hpo ../hpo/trial1.json
+	if args.hpo is not None:
+		out_file_path = args.hpo
+		assert os.path.isfile(out_file_path)
+		sequence_hyperparameters(out_file_path,id_start=321)
 
 	# with open("../hpo/test.json") as fp:
 		# HP_LIST = [json.loads(line) for line in fp.readlines() if line != "\n"]

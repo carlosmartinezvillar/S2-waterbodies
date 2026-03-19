@@ -64,25 +64,35 @@ def clear_jobs(start,end):
 	jobs  = [line.split()[0] for line in lines[1:-1]]
 	jobnr = [int(job.split('-')[-1]) for job in jobs]
 
-	if (start is None) and (end is None): #delete all
-		for job in jobs:
-			del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
-			print(del_out.stdout)
+	for i,job in enumerate(jobs):
+		if jobnr[i] in range(start,end+1,1):
+			try:
+				# print(job, jobnr[i])
+				del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
+				print(del_out.stdout)	
+			except Exception as e:
+				print(f"ERROR DELETING JOB {job}")
+				print(e)
+
+	# if (start is None) and (end is None): #delete all
+		# for job in jobs:
+			# del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
+			# print(del_out.stdout)
 	
-	if (start is None) and (end is not None): #delete (0,end]
-		for i in jobnr[:jobnr.index(end)+1]:
-			del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-			print(del_out.stdout)
+	# if (start is None) and (end is not None): #delete (0,end]
+		# for i in jobnr[:jobnr.index(end)+1]:
+			# del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
+			# print(del_out.stdout)
 
-	if (start is not None) and (end is None): #delete [start,N)
-		for i in jobnr[jobnr.index(start):]:
-			del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-			print(del_out.stdout)
+	# if (start is not None) and (end is None): #delete [start,N)
+	# 	for i in jobnr[jobnr.index(start):]:
+	# 		del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
+	# 		print(del_out.stdout)
 
-	if (start is not None) and (end is not None): #delete [start,end]
-		for i in jobnr[jobnr.index(start):jobnr.index(end)+1]:
-			del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-			print(del_out.stdout)
+	# if (start is not None) and (end is not None): #delete [start,end]
+	# 	for i in jobnr[jobnr.index(start):jobnr.index(end)+1]:
+	# 		del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
+	# 		print(del_out.stdout)
 
 
 if __name__ == '__main__':
@@ -94,6 +104,7 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	#CHECK YAML TEMPLATE EXISTS
+	assert args.spec is not None, "(kjobs.py): NO YAML SPEC TEMPLATE FILE GIVEN"
 	assert os.path.isfile(args.spec), "(kjobs.py): INCORRECT YAML TEMPLATE PATH IN SPEC ARG"
 
 	#CHECK+LOAD HYPERPARAMETER FILE
