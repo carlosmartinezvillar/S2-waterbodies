@@ -274,8 +274,10 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
                 utils.save_ddp_checkpoint(MODEL_DIR,model,optimizer,scaler,epoch,loss_tr,loss_va,best=True)        
 
             print(f'Best validation IoU: {best_iou:.5f} -- Epoch {best_epoch}')
-            total_time = time.time() - total_time_start
-            print(f'TOTAL TRAINING TIME: {total_time:.2f}s')
+        
+    if dist.get_rank() == 0:
+        total_time = time.time() - total_time_start
+        print(f'TOTAL TRAINING TIME: {total_time:.2f}s')
 
 
 def ddp_worker(rank,world_size,HP):
