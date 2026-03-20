@@ -227,7 +227,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
         # SYNC GPUS
         ddp_reduce_sum(loss_sum_va)
         ddp_reduce_sum(sample_sum_va)
-        dpp_reduce_sum(gpu_mat_va)
+        ddp_reduce_sum(gpu_mat_va)
 
         # VALIDATION METRICS
         loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
@@ -311,7 +311,7 @@ def ddp_worker(rank,world_size,HP):
     net = net.to(device)
     net = torch.nn.SyncBatchNorm.convert_sync_batchnorm(net)
     net = DDP(net,device_ids=[rank])
-    net = torch.compile(net)
+    # net = torch.compile(net)
 
     #---------- LOSS ------------------------------------------------------------------------------
     assert HP['LOSS'] in ["ce","ew","cw"], "INCORRECT STRING FOR LOSS IN DICT."
