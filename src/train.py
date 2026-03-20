@@ -239,6 +239,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		#LOOP
 		model.train()		
 		for X,T in dataloaders['training']:
+			optimizer.zero_grad()
 
 			#TO DEVICE
 			X = X.to(CUDA_DEV,non_blocking=True)
@@ -250,7 +251,6 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 				loss   = loss_fn(output,T)
 
 			# BACKPROP
-			optimizer.zero_grad()
 			scaler.scale(loss).backward()
 			scaler.step(optimizer)
 			scaler.update()
