@@ -143,7 +143,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
         ############################################################
         # SHUFFLE
         dataloaders['training'].sampler.set_epoch(epoch) 
-        loss_sum_tr = torch.zeros(1,device=device)
+        loss_sum_tr   = torch.zeros(1,device=device)
+        sample_sum_tr = torch.zeros(1,device=device)
 
         model.train()
         for X,T in dataloaders['training']:
