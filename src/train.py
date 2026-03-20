@@ -202,6 +202,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 	# AUTOMATIC MIXED PRECISION
 	scaler = torch.amp.GradScaler("cuda",enabled=True)
 
+	# SET LOG FILE
 	log_file_header = ["tloss","vloss"]
 	log_file_header += [f"tacc{c}" for c in range(n_classes)]
 	log_file_header += [f"tiou{c}" for c in range(n_classes)]
@@ -209,9 +210,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 	log_file_header += [f"vtpr{c}" for c in range(n_classes)]
 	log_file_header += [f"vppv{c}" for c in range(n_classes)]
 	log_file_header += [f"viou{c}" for c in range(n_classes)]	
-
 	log_file_path   = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'
 	logger     = utils.Logger(log_file_path,log_file_header)
+
 	best_iou   = 0.0
 	best_epoch = 0
 

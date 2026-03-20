@@ -107,11 +107,14 @@ def total_time_decorator(orig_func):
 ####################################################################################################
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_classes,device):
 
+    # AUTOMATIC MIXED PRECISION
     scaler = torch.amp.GradScaler("cuda",enabled=True)
 
+    # SET LOG FILE
     if dist.get_rank()==0:
         log_file_header = ["tloss","vloss"]
         log_file_header += [f"tacc{c}" for c in range(n_classes)]
+        log_file_header += [f"tiou{c}" for c in range(n_classes)]
         log_file_header += [f"vacc{c}" for c in range(n_classes)]
         log_file_header += [f"vtpr{c}" for c in range(n_classes)]
         log_file_header += [f"vppv{c}" for c in range(n_classes)]
@@ -251,6 +254,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
             # LOG RESULTS STRING
             epoch_result = [loss_tr,loss_va]
             epoch_result += [tr_acc[i] for i in range(n_classes)]
+            epoch_result += [tr_iou[i] for i in range(n_classes)]
             epoch_result += [va_acc[i] for i in range(n_classes)]
             epoch_result += [va_tpr[i] for i in range(n_classes)]
             epoch_result += [va_ppv[i] for i in range(n_classes)]
