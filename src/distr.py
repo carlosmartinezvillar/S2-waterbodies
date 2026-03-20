@@ -101,7 +101,7 @@ def total_time_decorator(orig_func):
 ####################################################################################################
 # TRAININING+VALIDATION
 ####################################################################################################
-def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n_classes=2,device):
+def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_classes,device):
 
     scaler = torch.amp.GradScaler("cuda",enabled=True)
 

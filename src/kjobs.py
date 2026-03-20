@@ -12,6 +12,7 @@ parser.add_argument('--params',default=None,required=False,help='Path to json fi
 parser.add_argument('--start',type=int,default=None,help='Starting row (zero indexed)')
 parser.add_argument('--end',type=int,default=None,help='End row zero-indexed using [0,end)')
 parser.add_argument('--clear',required=False,action='store_true',help='Delete jobs')
+parser.add_argument('--cancel',required=False,action='store_true',help='Cancel all pending jobs')
 args = parser.parse_args()
 
 #launch via kubectl
@@ -95,13 +96,49 @@ def clear_jobs(start,end):
 	# 		print(del_out.stdout)
 
 
+def cancel_pending():
+	'''
+	Iterate through list of pods in 'k get pods', get Pending and cancel job.
+	'''
+	out   = sp.run(f"kubectl get pods | grep Pending",capture_output=True,text=True,shell=True)
+	lines = out.stdout.split('\n')
+	pods  = [line.split()[0] for line in lines[1:-1]]
+	jobnr = [int(pod.split('-')[2]) for pod in pods]
+	jobs  = [pod[0:-6] for pod in pods]
+
+	with open('../hpo/pending.txt','w') as fp:
+		for j in jobnr:
+			fp.write(f"{p}\t{j}\n")
+	print(f"Jobs not executed written to '../hpo/pending.txt'")
+
+	# for job in jobs:
+	# 	try:
+	# 		del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
+	# 		print(del_out.stdout)	
+	# 	except Exception as e:
+	# 		print(f"ERROR DELETING JOB {job}")
+	# 		print(e)	
+
+
+def restart_pending(template_path):
+	with open('../hpo/pending.txt','r') as fp:
+		lines = fp.readlines()
+	job_queue = [int(l.split('\t')[1]) in lines]
+	launch_jobs(template_path,job_queue)
+
+
 if __name__ == '__main__':
 
 	# CLEAN JOBS AND EXIT
 	if args.clear is True:
 		print("CLEARING JOBS...")
 		clear_jobs(args.start,args.end)
-		sys.exit(1)
+		sys.exit(0)
+
+	if args.cancel is True:
+		print("CANCELING JOBS")
+		cancel_pending_jobs()
+		sys.exit(0)
 
 	#CHECK YAML TEMPLATE EXISTS
 	assert args.spec is not None, "(kjobs.py): NO YAML SPEC TEMPLATE FILE GIVEN"
@@ -131,8 +168,9 @@ if __name__ == '__main__':
 
 	if len(job_queue) == 0:
 		print("(kjobs.py): EMPTY JOB QUEUE. EXITING.")
-		sys.exit(1)
+		sys.exit(0)
 
 	#RUN
 	# this assumes executing from inside src/
 	launch_jobs(args.spec,job_queue)
+
