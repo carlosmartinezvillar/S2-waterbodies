@@ -378,7 +378,7 @@ def ddp_worker(rank,world_size,HP):
     }
 
     #---------- TRAINING --------------------------------------------------------------------------
-    train_and_validate_ddp(
+    train_and_validate(
         net,
         dataloaders,
         optimizer,
