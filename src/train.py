@@ -480,7 +480,6 @@ if __name__ == "__main__":
 		dataloaders,
 		optimizer,
 		loss_fn,
-		scaler,
 		scheduler,
 		HP['EPOCHS'],
 		n_classes

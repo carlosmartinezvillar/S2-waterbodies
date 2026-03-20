@@ -402,4 +402,4 @@ if __name__ == '__main__':
 
     #---------- SPAWN PROCESSES ------------------------------------------------    
     world_size = 2
-    mp.spawn(setup_ddp, args=(world_size,HPS),nprocs=world_size)    
+    mp.spawn(ddp_worker, args=(world_size,HPS),nprocs=world_size)    
