@@ -200,8 +200,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
         ############################################################
         # VALIDATION
         ############################################################        
-        loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
-        sample_sum_va = torch.zeros(1,device=CUDA_DEV)
+        loss_sum_va   = torch.zeros(1,device=device)
+        sample_sum_va = torch.zeros(1,device=device)
 
         # LOOP
         model.eval()
