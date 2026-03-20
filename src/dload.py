@@ -11,9 +11,40 @@ import glob
 import argparse
 
 import utils
+
+
 ################################################################################
 # CLASSES
 ################################################################################
+class LabelDivTransform(torch.nn.Module):
+	'''
+	Labels in the S2-DW dataset are stored as 255 and 0 for two classes and 255,
+	127, and 0 for 3 classes. This is for ease of visualization/inspection.
+	Labels are converted to values in [1,0] or [2,1,0] by floor division. In 
+	either case water is 1 and land is 0.
+	'''
+	def __init__(self,lbl_div):
+		super().__init__()
+		self.lbl_div = lbl_div
+
+	def forward(self,lbl):
+		'''
+		Parameters
+		----------
+		lbl : torch.Tensor
+		    The label array. It's ingested with dimension [1,H,W,L], i.e.: height, 
+		    width, and L number of 2 or 3 classes.
+		Returns
+		-------
+		torch.Tensor
+		    Converted label with values 0 and 1 for the binary case; and 0,1, and 2
+		    for three class arrays.	
+		'''		
+		lbl = torch.squeeze(lbl,0)
+		lbl = torch.div(lbl,self.lbl_div,rounding_mode='floor')
+		return lbl
+
+
 class SentinelDataset(torch.utils.data.Dataset):
 	def __init__(self,chip_dir,n_bands=3,n_labels=2,transform=None):
 		self.dir        = chip_dir
@@ -41,12 +72,13 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 		self.label_transform = v2.Compose([
 			v2.ToImage(),
-			v2.Lambda(lambda x: torch.squeeze(x,0)),
-			v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
+			# v2.Lambda(lambda x: torch.squeeze(x,0)),
+			# v2.Lambda(lambda x: torch.div(x,lbl_div,rounding_mode='floor')),
+			LabelDivTransform(lbl_div=lbl_div), #Removed lambda for ddp func pickling
 			v2.ToDtype(torch.int64)
 		])
 
-		self.additional_transform = transform #differentiate between train/validation/test
+		self.additional_transform = transform #applied only to train, not valdtn/test
 
 	def rgb_get(self,idx):
 		r,g,b,_ = Image.open(f'{self.ids[idx]}_B0X.tif').split()		
@@ -180,10 +212,11 @@ if __name__ == '__main__':
 	for epoch in range(5):
 		print(f"\nepoch nr. {epoch}")
 		print("-"*20)
-		for i,(X,T,img_path) in enumerate(dataloaders['training']):
-			if i==0:
-				print("First batch")
-				for p in img_path:print(p)
+		for i, (X,T) in enumerate(dataloaders['training']):
+		# for i,(X,T,img_path) in enumerate(dataloaders['training']):
+			# if i==0:
+				# print("First batch")
+				# for p in img_path:print(p)
 			pass
 
 
