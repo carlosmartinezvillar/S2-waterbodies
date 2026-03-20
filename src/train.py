@@ -50,7 +50,7 @@ CUDA_DEV  = None
 ####################################################################################################
 def calculate_metrics(confmat):
 	'''
-	Calculate precision, recall, accuracy, and IoU for a 
+	Calculate precision, recall, accuracy, and IoU for a confusion matrix tensor.
 	'''
 	with torch.no_grad():
 		# Add stuff
@@ -69,7 +69,8 @@ def calculate_metrics(confmat):
 	return ppv,tpr,acc,iou
 
 
-def update_confusion_matrix(gpu_mat,Y,T):
+@torch.no_grad()
+def update_confusion_matrix(confmat,T,Y,n_classes):
 	'''
 	Update a confusion matrix tensor in gpu. Per-pixel classification.
 	'''
@@ -77,12 +78,11 @@ def update_confusion_matrix(gpu_mat,Y,T):
 	# confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
 	# confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
 	# confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
-	with torch.no_grad():
-		for k in range(gpu_mat.size(0)*gpu_mat.size(0)):
-			i = k // gpu_mat.size(0) #row
-			j = k % gpu_mat.size(0) #col
-			confmat[i,j] += ((T==i) & (Y==j)).sum()
 
+	for k in range(n_classes*n_classes):
+		i = k // n_classes #row
+		j = k % n_classes #col
+		confmat[i,j] += ((T==i) & (Y==j)).sum()
 
 
 
@@ -99,7 +99,7 @@ def total_time_decorator(orig_func):
 ####################################################################################################
 # TRAININING ON FULL DATASET? -- MISSING
 ####################################################################################################
-def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,epochs=100):
+def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=100,n_classes=2):
 	'''
 	Train the model with the train+validation datasets combined.
 	'''
@@ -197,10 +197,11 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scheduler=None,epochs=100
 # TRAININING+VALIDATION
 ####################################################################################################
 @total_time_decorator
-def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=50,n_classes=2):
+def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n_classes=2):
 
-	N_tr = len(dataloaders['training'].dataset)
-	N_va = len(dataloaders['validation'].dataset)
+	# AUTOMATIC MIXED PRECISION
+	scaler = torch.amp.GradScaler("cuda",enabled=True)
+
 	log_file_header = ["tloss","vloss"]
 	log_file_header += [f"tacc{c}" for c in range(n_classes)]
 	log_file_header += [f"vacc{c}" for c in range(n_classes)]
@@ -259,10 +260,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 			# METRICS -- Confusion matrix in gpu
 			Y = output.detach().argmax(axis=1) #keep detach if needed to switch to .max()
 			T = T.detach()
-			gpu_mat_tr[0,0] += ((T==0) & (Y==0)).sum() #TN <--- change to modulo op for 2+ classes
-			gpu_mat_tr[0,1] += ((T==0) & (Y==1)).sum() #FP
-			gpu_mat_tr[1,0] += ((T==1) & (Y==0)).sum() #FN
-			gpu_mat_tr[1,1] += ((T==1) & (Y==1)).sum() #TP water
+			update_confusion_matrix(gpu_mat_tr,T,Y,n_classes)
 
 			# progress bar
 			t.update(1)
@@ -277,8 +275,12 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		loss_tr    = (loss_sum_tr/sample_sum_tr).item() #-----------sync
 		cpu_mat_tr = gpu_mat_tr.cpu() #-----------------------------sync
 		tr_ppv,tr_tpr,tr_acc,tr_iou = calculate_metrics(cpu_mat_tr) #tensor,result per class 
-		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f}')
-		print(f'IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
+		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f}',end='')
+		if n_classes > 2:
+			va_miou = va_iou.mean().item()
+			print(f' | mIoU: {va_miou:.5f}')
+		else:
+			print(f' | IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
 
 		
 		############################################################
@@ -310,10 +312,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 				sample_sum_va += X.size(0)
 
 				# METRICS -- Confusion matrix
-				gpu_mat_va[0,0] += ((T==0) & (Y==0)).sum() #TN
-				gpu_mat_va[0,1] += ((T==0) & (Y==1)).sum() #FP
-				gpu_mat_va[1,0] += ((T==1) & (Y==0)).sum() #FN
-				gpu_mat_va[1,1] += ((T==1) & (Y==1)).sum() #TP water
+				update_confusion_matrix(gpu_mat_va,T,Y,n_classes)
 
 				t.update(1)		
 		t.close()
@@ -322,8 +321,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
 		cpu_mat_va = gpu_mat_va.cpu() #---------------------------------sync
 		va_ppv,va_tpr,va_acc,va_iou = calculate_metrics(cpu_mat_va)
-		print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}')
-		print(f'IoU_0: {va_iou[0]:.5f} | IoU_1: {va_iou[1]:.5f}')
+		print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}',end='')
+
+		if n_classes > 2:
+			va_miou = va_iou.mean().item()
+			print(f' | mIoU: {va_miou:.5f}')
+		else:
+			print(f' | IoU_0: {va_iou[0]:.5f} | IoU_1: {va_iou[1]:.5f}')
 
 		############################################################
 		# LOG EPOCH
@@ -339,12 +343,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epoc
 		epoch_result += [va_tpr[i] for i in range(n_classes)]
 		epoch_result += [va_ppv[i] for i in range(n_classes)]
 		epoch_result += [va_iou[i] for i in range(n_classes)]
-		# epoch_result +=[loss_tr,loss_va,va_acc[-1],va_tpr[-1],va_ppv[-1],va_iou[-1]]
-		# va_mIoU = va_iou.mean() etc.
 		logger.log(epoch_result)
 
 		# SAVE MODEL
-		epoch_iou = va_iou[-1] #change this to mIoU for 3+ classes
+		if n_classes > 2:
+			epoch_iou = va_miou #mIoU for 3+ classes
+		else:
+			epoch_iou = va_iou[1] #true label iou for 2 classes
+
 		if best_iou < epoch_iou:
 			best_iou   = epoch_iou
 			best_epoch = epoch
@@ -433,9 +439,6 @@ if __name__ == "__main__":
 	if HP['SCHEDULER'] == "none":
 		scheduler = None
 
-	#----------- AUTOMATIC MIXED PRECISION ---------------------------------------------------------
-	scaler = torch.amp.GradScaler("cuda",enabled=True)
-
 	#---------- DATALOADERS ------------------------------------------------------------------------
 	transform = v2.Compose([
 		v2.RandomHorizontalFlip(p=0.5),
@@ -460,7 +463,7 @@ if __name__ == "__main__":
 			shuffle=True,
 			num_workers=4,
 			pin_memory=True,
-			prefetch_factor=8),
+			prefetch_factor=10),
 		'validation': torch.utils.data.DataLoader(
 			va_dataset,
 			batch_size=HP['BATCH'],
@@ -468,7 +471,7 @@ if __name__ == "__main__":
 			shuffle=False,
 			num_workers=4,
 			pin_memory=True,
-			prefetch_factor=8)
+			prefetch_factor=10)
 	}
 
 	#---------- TRAINING --------------------------------------------------------------------------
