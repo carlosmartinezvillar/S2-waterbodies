@@ -119,7 +119,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs,n_cl
         log_file_header += [f"vtpr{c}" for c in range(n_classes)]
         log_file_header += [f"vppv{c}" for c in range(n_classes)]
         log_file_header += [f"viou{c}" for c in range(n_classes)]   
-        log_file_path = f'{LOG_DIR}/epoch_log_{model.model_id:03}.tsv'   
+        log_file_path = f'{LOG_DIR}/epoch_log_{model.module.model_id:03}.tsv'   
         logger        = utils.Logger(log_file_path,log_file_header)
         total_time_start = time.time()
 
