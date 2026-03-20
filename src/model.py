@@ -40,10 +40,10 @@ class ConvBlock1(nn.Module):
 			first_stride = 1 # HALF-PADDING
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)			
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
@@ -66,10 +66,10 @@ class UpBlock1_4(nn.Module):
 		upconv_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}		
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
@@ -94,16 +94,16 @@ class ConvBlock2(nn.Module):
 
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
-		res = x.clone()
+		res = x
 		x = self.C2(x)
 		x = self.B2(x)
 		x = self.R2(x)
@@ -118,16 +118,16 @@ class UpBlock2_4(nn.Module):
 		upconv_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
-		res = x.clone()
+		res = x
 		x = self.C2(x)
 		x = self.B2(x)
 		x = self.R2(x)
@@ -139,13 +139,13 @@ class ConvBlock3(nn.Module):
 		super().__init__()
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 
 	def forward(self,x):
-		res = x.clone()
+		res = x
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
@@ -168,13 +168,13 @@ class ConvBlock4(nn.Module):
 
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
-		self.R3 = nn.ReLU(inplace=True)
+		self.R3 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
@@ -194,13 +194,13 @@ class UpBlock4_4(nn.Module):
 		upconv_params = {'kernel_size':3,'stride':2,'padding':1,'output_padding':1,'bias':False}		
 		self.C1 = nn.ConvTranspose2d(i_ch,o_ch,**upconv_params)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
-		self.R3 = nn.ReLU(inplace=True)
+		self.R3 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
@@ -228,19 +228,19 @@ class ConvBlock5(nn.Module):
 			
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=first_stride,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
-		self.R3 = nn.ReLU(inplace=True)
+		self.R3 = nn.ReLU()
 
 	def forward(self,x):
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
-		res = x.clone()
+		res = x
 		x = self.C2(x)
 		x = self.B2(x)
 		x = self.R2(x)
@@ -259,7 +259,7 @@ class UpBlock5_4(ConvBlock5):
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
-		res = x.clone()
+		res = x
 		x = self.C2(x)
 		x = self.B2(x)
 		x = self.R2(x)
@@ -274,16 +274,16 @@ class ConvBlock6(nn.Module):
 		super().__init__()
 		self.C1 = nn.Conv2d(i_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B1 = nn.BatchNorm2d(o_ch)
-		self.R1 = nn.ReLU(inplace=True)
+		self.R1 = nn.ReLU()
 		self.C2 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B2 = nn.BatchNorm2d(o_ch)
-		self.R2 = nn.ReLU(inplace=True)
+		self.R2 = nn.ReLU()
 		self.C3 = nn.Conv2d(o_ch,o_ch,kernel_size=3,stride=1,padding=1,bias=True)
 		self.B3 = nn.BatchNorm2d(o_ch)
-		self.R3 = nn.ReLU(inplace=True)
+		self.R3 = nn.ReLU()
 
 	def forward(self,x):
-		res = x.clone()
+		res = x
 		x = self.C1(x)
 		x = self.B1(x)
 		x = self.R1(x)
