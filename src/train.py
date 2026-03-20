@@ -17,7 +17,7 @@ import dload
 ####################################################################################################
 # SET GLOBAL VARS FROM ENV OR ARGS
 ####################################################################################################
-__spec__ = None # DEBUG with tqdm -- temp.
+# __spec__ = None # DEBUG with tqdm -- temp.
 
 parser = argparse.ArgumentParser()
 required = parser.add_argument_group('Required arguments')
@@ -204,6 +204,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 	log_file_header = ["tloss","vloss"]
 	log_file_header += [f"tacc{c}" for c in range(n_classes)]
+	log_file_header += [f"tiou{c}" for c in range(n_classes)]
 	log_file_header += [f"vacc{c}" for c in range(n_classes)]
 	log_file_header += [f"vtpr{c}" for c in range(n_classes)]
 	log_file_header += [f"vppv{c}" for c in range(n_classes)]
@@ -229,7 +230,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		# TRAINING
 		############################################################
 		# LOGS
-		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
+		# t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
 		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
 		loss_sum_tr   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_tr = torch.zeros(1,device=CUDA_DEV)
@@ -263,9 +264,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 			update_confusion_matrix(gpu_mat_tr,T,Y,n_classes)
 
 			# progress bar
-			t.update(1)
-			t.refresh()
-		t.close()
+			# t.update(1)
+			# t.refresh()
+		# t.close()
 
 		#SCHEDULER UPDATE
 		if scheduler is not None:
@@ -287,7 +288,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		# VALIDATION
 		############################################################
 		# LOGS
-		t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
+		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
 		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
 		loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_va = torch.zeros(1,device=CUDA_DEV)
@@ -314,8 +315,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 				# METRICS -- Confusion matrix
 				update_confusion_matrix(gpu_mat_va,T,Y,n_classes)
 
-				t.update(1)		
-		t.close()
+				# t.update(1)		
+		# t.close()
 
 		# VALIDATION METRICS FOR LOG
 		loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
@@ -339,6 +340,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		# RESULTS
 		epoch_result = [loss_tr,loss_va]
 		epoch_result += [tr_acc[i] for i in range(n_classes)]
+		epoch_result += [tr_iou[i] for i in range(n_classes)]
 		epoch_result += [va_acc[i] for i in range(n_classes)]
 		epoch_result += [va_tpr[i] for i in range(n_classes)]
 		epoch_result += [va_ppv[i] for i in range(n_classes)]
