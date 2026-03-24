@@ -107,17 +107,17 @@ def cancel_pending():
 	jobs  = [pod[0:-6] for pod in pods]
 
 	with open('../hpo/pending.txt','w') as fp:
-		for j in jobnr:
-			fp.write(f"{p}\t{j}\n")
+		for i,j in enumerate(jobnr):
+			fp.write(f"{pods[i]}\t{j}\n")
 	print(f"Jobs not executed written to '../hpo/pending.txt'")
 
-	# for job in jobs:
-	# 	try:
-	# 		del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
-	# 		print(del_out.stdout)	
-	# 	except Exception as e:
-	# 		print(f"ERROR DELETING JOB {job}")
-	# 		print(e)	
+	for job in jobs:
+		try:
+			del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
+			print(del_out.stdout)	
+		except Exception as e:
+			print(f"ERROR DELETING JOB {job}")
+			print(e)	
 
 
 def restart_pending(template_path):
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
 	if args.cancel is True:
 		print("CANCELING JOBS")
-		cancel_pending_jobs()
+		cancel_pending()
 		sys.exit(0)
 
 	#CHECK YAML TEMPLATE EXISTS

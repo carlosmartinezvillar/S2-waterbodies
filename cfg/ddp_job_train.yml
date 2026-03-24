@@ -16,13 +16,13 @@ spec:
             
           resources:
             limits:
-              memory: 24G
-              cpu: 6
+              memory: 16G
+              cpu: 4
               nvidia.com/gpu: 2
               ephemeral-storage: 20G
             requests:
               memory: 16G
-              cpu: 6
+              cpu: 4
               nvidia.com/gpu: 2
               ephemeral-storage: 20G
 

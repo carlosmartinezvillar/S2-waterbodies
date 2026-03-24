@@ -100,22 +100,39 @@ class SentinelDataset(torch.utils.data.Dataset):
 
 
 class PotsdamDataset(torch.utils.data.Dataset):
-	def __init__(self,chip_dir):
-		self.chip_dir = chip_dir
-		self.paths    = sorted(glob.glob(f"{self.chip_dir}/*.tif"))
+	def __init__(self,chip_dir,n_labels,train,transform=None):
+		self.root_dir = chip_dir
 
-		self.input_transform = v2.Compose([
+		if train == True:
+			self.img_dir = "./img_dir/train/"
+			self.ann_dir = "./ann_dir/train/"
+		else:
+			self.img_dir = "./img_dir/val/"
+			self.ann_dir = "./ann_dir/val/"
+
+		self.img_paths = sorted(glob.glob(f"{self.img_dir}*.png"))
+		self.ann_paths = sorted(glob.glob(f"{self.ann_dir}*.png"))
+
+		self.img_transform = v2.Compose([
 			v2.ToImage(),
 			v2.ToDtype(torch.float32,scale=True)
 		])
+
+		self.ann_transform = v2.Compose([
+			v2.ToImage(),
+			v2.ToDtype(torch.int64)
+		])
 		pass
 
-	def __len__(self,idx):
-		pass
+	def __len__(self):
+		return len(self.ids)
 
-	def __getitem__(self,i):
-		pass
-		return
+	def __getitem__(self,idx):
+		rgb = Image.open(f"{self.img_paths[idx]}.png")
+		lbl = Image.open(f"{self.ann_paths[idx]}.png")
+		image = self.img_transform(rgb)
+		label = self.ann_transform(lbl)
+		return image,label
 
 
 class LoveDADataset(torch.utils.data.Dataset):

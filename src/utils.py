@@ -205,70 +205,74 @@ def randomize_hyperparameters(n=1): #-----------------------------------> TODO
 	return HP
 
 
-def sequence_hyperparameters(out_file_path,id_start):
+def sequence_hyperparameters(out_file_path,id_start,trial):
 	'''
 	Create a list of dict elements each containing a model's hyperparameters.
 	The list is stored in out_path in .json format and created using a 
 	cross-product (all-by-all) of the parameters provided.
 	'''
 	# Each parameter -- Trial 1
-	seeds = [1]	
-	epoch = [50]
-	lrate = [0.0001,0.00025,0.0005,0.00075,0.001]	
-	sched = ["none"]
-	optim = ["adamw"]
-	decay = [0.01,0.001,0.0001,0.00001]
-	loss  = ["ce"]	
-	batch = [16,32]
-	inits = ["random"]
-	bands = [3]
-	label = [2]
-	model = ["unet2_1","unet2_2","unet2_4",
-		"unet3_1",
-		"unet5_1","unet5_2","unet5_4",
-		"unet6_1"]
+	if trial == 1:
+		seeds = [1]	
+		epoch = [50]
+		lrate = [0.0001,0.00025,0.0005,0.00075,0.001]	
+		sched = ["none"]
+		optim = ["adamw"]
+		decay = [0.01,0.001,0.0001,0.00001]
+		loss  = ["ce"]	
+		batch = [16,32]
+		inits = ["random"]
+		bands = [3]
+		label = [2]
+		model = ["unet2_1","unet2_2","unet2_4",
+			"unet3_1",
+			"unet5_1","unet5_2","unet5_4",
+			"unet6_1"]
 
-	# # Each parameter -- Trial 2 No residuals
-	# seeds = [1]	
-	# epoch = [50]
-	# lrate = [0.0001]	
-	# sched = ["none"]
-	# optim = ["adamw"]
-	# decay = [0.01,0.001,0.0001,0.00001]
-	# loss  = ["ce"]	
-	# batch = [16]
-	# inits = ["random"]
-	# bands = [3]
-	# label = [2]
-	# model = ["unet1_2","unet1_4","unet4_2","unet4_4"] #try no residuals for best in trial 1
+	# Each parameter -- Trial 2 No residuals
+	if trial == 2:
+		seeds = [1]
+		epoch = [50]
+		lrate = [0.0001,0.00025,0.0005,0.00075,0.001]	
+		sched = ["none"]
+		optim = ["adamw"]
+		decay = [0.01,0.001,0.0001,0.00001]
+		loss  = ["ce"]	
+		batch = [16,32]
+		inits = ["random"]
+		bands = [3]
+		label = [2]
+		model = ["unet1_3","unet4_3","unet1_2"] #try no residuals for best in trial 1
 
 	# Each parameter -- Trial 3 RGB+NIR
-	# seeds = [1]	
-	# epoch = [50]
-	# lrate = [0.0001,0.00025,0.0005] #?	
-	# sched = ["none"]
-	# optim = ["adamw"]
-	# decay = [0.01,0.001,0.0001,0.00001] #?
-	# loss  = ["ce"]	
-	# batch = [16,32] #?
-	# inits = ["random"]
-	# bands = [4]
-	# label = [2]
-	# model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
+	if trial == 3:
+		seeds = [1]	
+		epoch = [50]
+		lrate = [0.0001,0.00025,0.0005] #?	
+		sched = ["none"]
+		optim = ["adamw"]
+		decay = [0.01,0.001,0.0001,0.00001] #?
+		loss  = ["ce"]	
+		batch = [16,32] #?
+		inits = ["random"]
+		bands = [4]
+		label = [2]
+		model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
 
 	# Each parameter -- Trial 4 Best unseeded 100 epochs
-	# seeds = [1]	
-	# epoch = [50]
-	# lrate = [0.0001,0.00025,0.0005] #?	
-	# sched = ["none"]
-	# optim = ["adamw"]
-	# decay = [0.01,0.001,0.0001,0.00001] #?
-	# loss  = ["ce"]	
-	# batch = [16,32] #?
-	# inits = ["random"]
-	# bands = [4]
-	# label = [2]
-	# model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
+	if trial == 4:
+		seeds = [1]	
+		epoch = [50]
+		lrate = [0.0001,0.00025,0.0005] #?	
+		sched = ["none"]
+		optim = ["adamw"]
+		decay = [0.01,0.001,0.0001,0.00001] #?
+		loss  = ["ce"]	
+		batch = [16,32] #?
+		inits = ["random"]
+		bands = [4]
+		label = [2]
+		model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
 
 	# Cross-product
 	hp = list(itertools.product(seeds,epoch,lrate,sched,optim,decay,loss,batch,inits,bands,label,model))
@@ -314,63 +318,15 @@ def set_seed(seed,cuda=True):
 ####################################################################################################
 if __name__ == "__main__":
 
+	# ARGV
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--hpo",required=False,default=None,
 		help="Create a JSON file with a combination of hyperparameters.")
 	args = parser.parse_args()
 
-
-	# #TEST CONFUSION MATRIX
-	# print("TESTING CONFUSION MATRIX")
-
-	# #CHECK CONFUSION MATRIX
-	# #check 2-way classification
-	# y0 = np.array([
-	# 	[0,0,0,0,0],
-	# 	[0,0,1,1,1],
-	# 	[0,0,1,1,1],
-	# 	[0,0,0,0,0],
-	# 	[0,0,0,0,0]])
-
-	# t0 = np.array([
-	# 	[0,0,0,0,0],
-	# 	[0,0,0,0,0],
-	# 	[0,1,1,0,0],
-	# 	[0,1,1,0,0],
-	# 	[0,0,0,0,0]])
-	# cm2 = ConfusionMatrix(n_classes=2)
-
-	# # for i in range(1000):
-	# cm2.update(y0,t0)
-	# cm2
-
-	# #another check for 3-way classification
-	# #from array [B,C,x,y] after argmax axis=1, [B,x,y]
-	# y0 = np.array([[
-	# 	[0,0,0,2,2],
-	# 	[0,1,2,2,2],
-	# 	[0,0,1,2,0],
-	# 	[0,0,0,1,0],
-	# 	[0,0,0,0,0]]])
-		
-	# t0 = np.array([[
-	# 	[0,1,2,2,2],
-	# 	[0,1,2,2,2],
-	# 	[0,0,1,2,2],
-	# 	[0,0,0,1,1],
-	# 	[0,0,0,0,0]]])
-
-	# cm3 = ConfusionMatrix(n_classes=3)
-	# # for i in range(1000):
-	# cm3.update(y0,t0)
-	# cm3
-
 	# python3 utils.py --hpo ../hpo/trial1.json
 	if args.hpo is not None:
 		out_file_path = args.hpo
-		assert os.path.isfile(out_file_path)
-		sequence_hyperparameters(out_file_path,id_start=321)
-
-	# with open("../hpo/test.json") as fp:
-		# HP_LIST = [json.loads(line) for line in fp.readlines() if line != "\n"]
-	# line = HP_LIST[0]
+		assert not os.path.isfile(out_file_path), f"Overwriting existing file {out_file_path}"
+		# sequence_hyperparameters(out_file_path,id_start=101,trial=1)		
+		sequence_hyperparameters(out_file_path,id_start=421,trial=2)
