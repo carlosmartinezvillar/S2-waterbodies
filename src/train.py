@@ -264,7 +264,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 			#     if p.grad is not None:
 			#         sq_sum += p.grad.detach().pow(2).sum() # Total parameter norm for single pass
 			# sum_norms += sq_sum.sqrt()
-			sum_norms += torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
+			total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
+			sum_norms += total_norm
+			if torch.isinf(total_norm) or torch.isnan(total_norm):
+			    for name, param in model.named_parameters():
+			        if param.grad is not None:
+			            param_norm = param.grad.data.norm(2)
+			            if torch.isinf(param_norm) or torch.isnan(param_norm):
+			                print(f"--- Layer: {name} | Norm: {param_norm}")			
 
 			scaler.step(optimizer)
 			scaler.update()
