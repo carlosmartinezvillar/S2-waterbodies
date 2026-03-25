@@ -244,7 +244,7 @@ class iSAIDDataset(torch.utils.data.Dataset):
 
 			#LEAVE OUT TILES
 			if split == True: 
-				vtiles = ['P0003','P0011','P0002']
+				vtiles = ['P0003','P0011','P0002'] #Urban,coastal/harbor,aviation/scale
 				if validate == True:
 					self.img_paths = []
 					self.ann_paths = []

@@ -96,6 +96,7 @@ def total_time_decorator(orig_func):
 
 	return wrapper
 
+
 ####################################################################################################
 # TRAININING ON FULL DATASET? -- MISSING
 ####################################################################################################
@@ -236,6 +237,9 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		loss_sum_tr   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_tr = torch.zeros(1,device=CUDA_DEV)
 
+		# log norms --------------------------------- remove
+		sum_norms = torch.zeros(1,device=CUDA_DEV)
+
 		#LOOP
 		model.train()		
 		for X,T in dataloaders['training']:
@@ -252,6 +256,14 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 			# BACKPROP
 			scaler.scale(loss).backward()
+
+			#log norms --------------------------------- remove
+			sq_sum = torch.zeros(1,device=CUDA_DEV)
+			for p in model.parameters():
+			    if p.grad is not None:
+			        sq_sum += p.grad.detach().pow(2).sum() # Total parameter norm for single pass
+			sum_norms += sq_sum.sqrt()
+
 			scaler.step(optimizer)
 			scaler.update()
 
@@ -284,6 +296,10 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		else:
 			print(f' | IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
 
+
+		# norms -------------------------------------------------- remove
+		avg_norm = sum_norms.item()/len(dataloaders['training'])
+		print(f"AVG NORM: {avg_norm:.5f}")
 		
 		############################################################
 		# VALIDATION
