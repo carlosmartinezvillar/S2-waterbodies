@@ -258,11 +258,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 			scaler.scale(loss).backward()
 
 			#log norms --------------------------------- remove
-			sq_sum = torch.zeros(1,device=CUDA_DEV)
-			for p in model.parameters():
-			    if p.grad is not None:
-			        sq_sum += p.grad.detach().pow(2).sum() # Total parameter norm for single pass
-			sum_norms += sq_sum.sqrt()
+			scaler.unscale_(optimizer)
+			# sq_sum = torch.zeros(1,device=CUDA_DEV)
+			# for p in model.parameters():
+			#     if p.grad is not None:
+			#         sq_sum += p.grad.detach().pow(2).sum() # Total parameter norm for single pass
+			# sum_norms += sq_sum.sqrt()
+			sum_norms += torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
 
 			scaler.step(optimizer)
 			scaler.update()
