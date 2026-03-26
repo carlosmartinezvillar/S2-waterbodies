@@ -336,7 +336,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 
 if __name__ == "__main__":
-	
+
 	#---------- LOAD AND PARSE HYPERPARAMETER DICT ------------------------------------------------
 	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
@@ -435,7 +435,7 @@ if __name__ == "__main__":
 			batch_size=HP['BATCH'],
 			drop_last=False,
 			shuffle=True,
-			num_workers=2,
+			num_workers=4,
 			pin_memory=True,
 			prefetch_factor=10),
 		'validation': torch.utils.data.DataLoader(
@@ -443,7 +443,7 @@ if __name__ == "__main__":
 			batch_size=HP['BATCH'],
 			drop_last=False,
 			shuffle=False,
-			num_workers=2,
+			num_workers=4,
 			pin_memory=True,
 			prefetch_factor=10)
 	}
