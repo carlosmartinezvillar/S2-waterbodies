@@ -104,14 +104,8 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=1
 	'''
 	Train the model with the train+validation datasets combined.
 	'''
-	N_tr = len(dataloaders['training'].dataset) #nr of samples
-	N_va = len(dataloaders['validation'].dataset)
-	B_tr = len(dataloaders['training']) #nr of batches
-	B_va = len(dataloaders['validation'])
 	best_iou   = 0.0
 	best_epoch = 0
-	loss_sum = 0.0
-
 
 	#ENABLE GRAD
 	model.train()	
@@ -119,15 +113,15 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=1
 
 
 	for epoch in range(epochs):
-		batch_loss = []
-		M = utils.ConfusionMatrix(n_classes=2)
-		t = tqdm(total=B_tr+B_va,ncols=80,ascii=True)
+
 		epoch_start_time = time.time()
 		print(f'\nEpoch {epoch}/{epochs-1}')
 		print('-'*80)		
 
-		samples  = 0
 
+		# TRAIN
+
+		tr_sample_sum = torch.zeros(1,device=CUDA_DEV)
 		for X,T in dataloaders['training']:
 			X.to(CUDA_DEV,non_blocking=True)
 			T.to(CUDA_DEV,non_blocking=True)
@@ -139,45 +133,19 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=1
 			loss.backward()
 			optimizer.step()
 
-			loss_sum += loss.item() * X.size(0)
-			samples  += X.size(0)
-			Y = output.detach().cpu().numpy().argmax(axis=1)
-			T = T.detach().cpu().numpy()
-			M.update(Y,T)
-			batch_loss.append(loss.item())
+			tr_loss_sum   += loss.detach() * X.size(0)
+			tr_sample_sum += X.size(0)
+			# Y = output.detach().cpu().numpy().argmax(axis=1)
+			# T = T.detach().cpu().numpy()
+			# M.update(Y,T)
+			# batch_loss.append(loss.item())
 
-			t.set_postfix(loss='{:05.5f}'.format(loss_sum/samples))
-			t.update(1)
-
-		for X,T in dataloaders['validation']:
-			X.to(CUDA_DEV,non_blocking=True)
-			T.to(CUDA_DEV,non_blocking=True)
-
-			output = model(X)
-			loss   = loss_fn(output,T)
-
-			optimizer.zero_grad()
-			loss.backward()
-			optimizer.step()
-
-			loss_sum += loss.item() * X.size(0)
-			samples  += X.size(0)
-			Y = output.detach().cpu().numpy().argmax(axis=1)
-			T = T.detach().cpu().numpy()
-			M.update(Y,T)
-			batch_loss.append(loss.item())
-
-
-			t.set_postfix(loss='{:05.5f}'.format(loss_sum/samples))
-			t.update(1)
-
-		t.close()
 
 		if scheduler is not None:
 			scheduler.step()
 
-		loss_total = loss_sum / (N_tr+N_va)
-		print(f'[T] loss: {loss_total:.5f} | acc: {M.acc():.5f} | iou: {M.iou():.5f}')
+		# loss_total = loss_sum / (N_tr+N_va)
+		# print(f'[T] loss: {loss_total:.5f} | acc: {M.acc():.5f} | iou: {M.iou():.5f}')
 
 		epoch_time = time.time() - epoch_start_time
 		print(f'\nEpoch time: {epoch_time:.2f}s')
@@ -185,11 +153,11 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=1
 		# logger.log(epoch_result)
 
 		# SAVE MODEL
-		epoch_iou = M.iou()
+		# epoch_iou = M.iou()
 		if best_iou < epoch_iou:
-			best_iou = epoch_iou
+			best_iou   = epoch_iou
 			best_epoch = epoch
-			# utils.save_checkpoint(MODEL_DIR,model,optimizer,epoch,loss_tr,loss_va,best=True)
+			# utils.save_checkpoint(MODEL_DIR,model,optimizer,scaler,epoch,loss_tr,loss_va,best=True)
 
 		print(f'Best validation IoU: {best_iou:.4f}')
 
@@ -201,7 +169,7 @@ def train_full_set(model,dataloaders,optimizer,loss_fn,scaler,scheduler,epochs=1
 def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n_classes=2):
 
 	# AUTOMATIC MIXED PRECISION
-	scaler = torch.amp.GradScaler("cuda",enabled=True)
+	scaler = torch.amp.GradScaler("cuda",enabled=True,init_scale=1024)
 
 	# SET LOG FILE
 	log_file_header = ["tloss","vloss"]
@@ -259,12 +227,7 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 			#log norms --------------------------------- remove
 			scaler.unscale_(optimizer)
-			# sq_sum = torch.zeros(1,device=CUDA_DEV)
-			# for p in model.parameters():
-			#     if p.grad is not None:
-			#         sq_sum += p.grad.detach().pow(2).sum() # Total parameter norm for single pass
-			# sum_norms += sq_sum.sqrt()
-			total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10.0)
+			total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 			sum_norms += total_norm
 			if torch.isinf(total_norm) or torch.isnan(total_norm):
 			    for name, param in model.named_parameters():
