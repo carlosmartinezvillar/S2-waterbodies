@@ -97,6 +97,14 @@ def total_time_decorator(orig_func):
 	return wrapper
 
 
+def print_exploding_layers(total_norm,model):
+	if torch.isinf(total_norm) or torch.isnan(total_norm):
+	    for name, param in model.named_parameters():
+	        if param.grad is not None:
+	            param_norm = param.grad.data.norm(2)
+	            if torch.isinf(param_norm) or torch.isnan(param_norm):
+	                print(f"--- Layer: {name} | Norm: {param_norm}")		
+
 ####################################################################################################
 # TRAININING ON FULL DATASET? -- MISSING
 ####################################################################################################
@@ -199,14 +207,10 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 		############################################################
 		# TRAINING
 		############################################################
-		# LOGS
-		# t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
-		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
+		# LOGS		
 		loss_sum_tr   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_tr = torch.zeros(1,device=CUDA_DEV)
-
-		# log norms --------------------------------- remove
-		sum_norms = torch.zeros(1,device=CUDA_DEV)
+		sum_norms     = torch.zeros(1,device=CUDA_DEV) #gradient norms
 
 		#LOOP
 		model.train()		
@@ -224,18 +228,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 			# BACKPROP
 			scaler.scale(loss).backward()
-
-			#log norms --------------------------------- remove
 			scaler.unscale_(optimizer)
-			total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-			sum_norms += total_norm
-			if torch.isinf(total_norm) or torch.isnan(total_norm):
-			    for name, param in model.named_parameters():
-			        if param.grad is not None:
-			            param_norm = param.grad.data.norm(2)
-			            if torch.isinf(param_norm) or torch.isnan(param_norm):
-			                print(f"--- Layer: {name} | Norm: {param_norm}")			
-
+			sum_norm += torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 			scaler.step(optimizer)
 			scaler.update()
 
@@ -248,37 +242,29 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 			T = T.detach()
 			update_confusion_matrix(gpu_mat_tr,T,Y,n_classes)
 
-			# progress bar
-			# t.update(1)
-			# t.refresh()
-		# t.close()
-
 		#SCHEDULER UPDATE
 		if scheduler is not None:
 			scheduler.step()
 
 		# TRAINING METRICS FOR LOG
-		loss_tr    = (loss_sum_tr/sample_sum_tr).item() #-----------sync
-		cpu_mat_tr = gpu_mat_tr.cpu() #-----------------------------sync
+		loss_tr    = (loss_sum_tr/sample_sum_tr).item() #-------------sync
+		cpu_mat_tr = gpu_mat_tr.cpu() #-------------------------------sync
+		avg_norm   = sum_norms.item()/len(dataloaders['training']) #--sync
 		tr_ppv,tr_tpr,tr_acc,tr_iou = calculate_metrics(cpu_mat_tr) #tensor,result per class 
+
 		print(f'[T] LOSS: {loss_tr:.5f} | ACC: {tr_acc[-1]:.5f}',end='')
 		if n_classes > 2:
 			va_miou = va_iou.mean().item()
 			print(f' | mIoU: {va_miou:.5f}')
 		else:
 			print(f' | IoU_0: {tr_iou[0]:.5f} | IoU_1: {tr_iou[1]:.5f}')
-
-
 		# norms -------------------------------------------------- remove
-		avg_norm = sum_norms.item()/len(dataloaders['training'])
 		print(f"AVG NORM: {avg_norm:.5f}")
 		
 		############################################################
 		# VALIDATION
 		############################################################
-		# LOGS
-		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True)
-		# t = tqdm(total=len(dataloaders['validation']),ncols=80,ascii=True,file=sys.stdout)		
+		# LOGS		
 		loss_sum_va   = torch.zeros(1,device=CUDA_DEV)
 		sample_sum_va = torch.zeros(1,device=CUDA_DEV)
 
@@ -304,15 +290,13 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 				# METRICS -- Confusion matrix
 				update_confusion_matrix(gpu_mat_va,T,Y,n_classes)
 
-				# t.update(1)		
-		# t.close()
 
 		# VALIDATION METRICS FOR LOG
 		loss_va    = (loss_sum_va / sample_sum_va).item() #-------------sync
 		cpu_mat_va = gpu_mat_va.cpu() #---------------------------------sync
 		va_ppv,va_tpr,va_acc,va_iou = calculate_metrics(cpu_mat_va)
-		print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}',end='')
 
+		print(f'[V] LOSS: {loss_va:.5f} | ACC: {va_acc[-1]:.5f}',end='')
 		if n_classes > 2:
 			va_miou = va_iou.mean().item()
 			print(f' | mIoU: {va_miou:.5f}')
@@ -351,9 +335,8 @@ def train_and_validate(model,dataloaders,optimizer,loss_fn,scheduler,epochs=50,n
 
 
 
-
 if __name__ == "__main__":
-
+	
 	#---------- LOAD AND PARSE HYPERPARAMETER DICT ------------------------------------------------
 	assert os.path.isfile(args.params), "INCORRECT JSON FILE PATH"
 	with open(args.params,'r') as fp:
