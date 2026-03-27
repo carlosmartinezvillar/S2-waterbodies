@@ -16,7 +16,7 @@ parser.add_argument('--cancel',required=False,action='store_true',help='Cancel a
 args = parser.parse_args()
 
 #launch via kubectl
-def launch_jobs(template_path,job_nrs):
+def launch_jobs(template_path,params_path,job_nrs):
 	'''
 	Opens a template YAML and launches a kubernetes job for each number in job_nrs.
 	Each job is named according to this number and matches a model id listed in the json
@@ -35,7 +35,9 @@ def launch_jobs(template_path,job_nrs):
 
 		#SET THE NEW STRINGS FOR THIS ROW
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
-		new_cmd_str = old_cmd_str.replace('--row 0;',f'--row {model_id};') #let train.py search
+		new_cmd_str = old_cmd_str.
+			replace('--row 0;',f'--row {model_id};').
+			replace('--params ../hpo/params.json',f'--params {params_path}') #let train.py search
 
 		#ASSIGN NEW STRINGS TO OBJECT
 		obj['metadata']['name'] = new_job_str
@@ -172,5 +174,5 @@ if __name__ == '__main__':
 
 	#RUN
 	# this assumes executing from inside src/
-	launch_jobs(args.spec,job_queue)
+	launch_jobs(args.spec,args.params,job_queue)
 
