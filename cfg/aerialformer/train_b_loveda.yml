@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: af-b-loveda
+spec:
+
+  template:
+    spec:
+
+      containers:
+        - name: bench-box
+          image: docker.io/cimartinezvillar/benchmark-trainer:cuda11.7base
+          imagePullPolicy: Always
+
+          resources:
+            limits:
+              memory: 48G
+              cpu: 4
+              nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 60G #isaid: 32GB + ~32 .pth(~25GB)?
+            requests:
+              memory: 48G
+              cpu: 4
+              nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 60G
+
+          volumeMounts:
+            - mountPath: /data_pvc
+              name: zipped-vol
+
+            - mountPath: /log_pvc
+              name: log-vol
+
+            - mountPath: /dev/shm
+              name: dshm              
+
+          command: ["/bin/sh","-c"]
+          args:
+          - |
+            git clone https://github.com/carlosmartinezvillar/AerialFormer.git;
+            cd AerialFormer;
+            pip install -v -e .;
+            echo "Copying data...";            
+            mkdir ./data;
+            cp -v /data_pvc/loveDA.zip ./data;
+            unzip -q ./data/loveDA.zip -d ./data/;
+            rm ./data/loveDA.zip;
+            python3 ./tools/train.py configs/aerialformer/aerialformer_base_512x512_loveda.py;
+            mv ./work_dirs ./aerialformer_b_loveda;
+            cp -rv ./aerialformer_b_loveda /log_pvc;
+
+      volumes:
+      - name: zipped-vol
+        persistentVolumeClaim:
+          claimName: lake-benchmark-data
+
+      - name: log-vol
+        persistentVolumeClaim:
+          claimName: lake-benchmark-logs
+
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 8G
+
+      restartPolicy: Never
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: nvidia.com/gpu.product
+                  operator: In
+                  values:
+                  # - NVIDIA-GeForce-RTX-3090
+                  - NVIDIA-RTX-A6000   
+
+
+  backoffLimit: 0

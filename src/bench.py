@@ -64,12 +64,14 @@ def load_maxvit(pretrained=True):
 	pass
 
 
-def train(model,s2_loaders,transforms,optimizer,loss_fn,scaler,scheduler=None,n_epochs=50,n_class=2,dev):
+def train(model,s2_loaders,transforms,optimizer,loss_fn,scheduler=None,epochs=50,n_class=2,dev):
 	'''
 	Fit benchmark model to S2-DW dataset.
 	'''
 
-	for epoch in range(n_epochs):
+	scaler = torch.amp.GradScaler("cuda",enabled=True,init_scale=1024)
+
+	for epoch in range(epochs):
 		confusion_matrix_tr = torch.zeros((n_class,n_class))
 		confusion_matrix_va = torch.zeros((n_class,n_class))
 		epoch_start_time = time.time()
@@ -80,9 +82,8 @@ def train(model,s2_loaders,transforms,optimizer,loss_fn,scaler,scheduler=None,n_
 		############################################################
 		# TRAINING
 		############################################################	
-		t = tqdm(total=len(dataloaders['training']),ncols=80,ascii=True)
-		loss_sum_tr = 0.0
-		samples_ran = 0
+		loss_sum_tr = torch.zeros(1,device=CUDA_DEV)
+		samples_ran = torch.zeros(1,device=CUDA_DEV)
 		model.train()
 
 		for X,T in s2_loaders['training']:
@@ -102,7 +103,8 @@ def train(model,s2_loaders,transforms,optimizer,loss_fn,scaler,scheduler=None,n_
 			scaler.update()
 
 			#METRICS
-			loss_sum_tr += loss.item() * X.size(0)
+			loss_sum_tr += loss.detach() * X.size(0)
+			samples_ran += X.size(0)
 
 			Y = output.detach().argmax(axis=1)
 			T = T.detach()

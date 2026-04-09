@@ -1,0 +1,84 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: segnext-b-potsdam
+spec:
+
+  template:
+    spec:
+
+      containers:
+        - name: bench-box
+          image: docker.io/cimartinezvillar/benchmark-trainer:segnext
+          imagePullPolicy: Always
+
+          resources:
+            limits:
+              memory: 40G
+              cpu: 4
+              nvidia.com/gpu: 1
+              # nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 70G #isaid: 32GB + ~32 .pth(~25GB)?
+            requests:
+              memory: 40G
+              cpu: 4
+              nvidia.com/gpu: 1
+              # nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 70G
+
+          volumeMounts:
+            - mountPath: /data_pvc
+              name: zipped-vol
+
+            - mountPath: /log_pvc
+              name: log-vol
+
+            - mountPath: /dev/shm
+              name: dshm              
+
+          command: ["/bin/sh","-c"]
+          args:
+          - git clone https://github.com/carlosmartinezvillar/SegNeXt.git;
+            cd SegNeXt;
+            pip install -v -e .;
+            echo "Copying weights...";
+            mkdir ./pretrained;
+            cp /log_pvc/segnext_base_512x512_ade_160k.pth ./pretrained/;
+            echo "Copying data...";
+            mkdir ./data;
+            cp /data_pvc/6potsdam.zip ./data/;
+            unzip -q ./data/6potsdam.zip -d ./data/;
+            rm ./data/6potsdam.zip;
+            python3 ./tools/train.py ./local_configs/downstream/segnext_b_6potsdam.py;
+            mv ./work_dirs ./segnext_b_6potsdam;
+            cp -r ./segnext_b_6potsdam /log_pvc;
+
+      volumes:
+      - name: zipped-vol
+        persistentVolumeClaim:
+          claimName: lake-benchmark-data
+
+      - name: log-vol
+        persistentVolumeClaim:
+          claimName: lake-benchmark-logs
+
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 8G
+
+      restartPolicy: Never
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions: 
+                - key: nvidia.com/gpu.product
+                  operator: In
+                  values:
+                  - NVIDIA-GeForce-RTX-3090
+                  # - NVIDIA-RTX-A6000   
+
+
+  backoffLimit: 0

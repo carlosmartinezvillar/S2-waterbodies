@@ -35,9 +35,9 @@ def launch_jobs(template_path,params_path,job_nrs):
 
 		#SET THE NEW STRINGS FOR THIS ROW
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
-		new_cmd_str = old_cmd_str.
-			replace('--row 0;',f'--row {model_id};').
-			replace('--params ../hpo/params.json',f'--params {params_path}') #let train.py search
+		new_cmd_str = old_cmd_str.replace(
+			'--row 0;',f'--row {model_id};').replace(
+			'--params ../hpo/params.json',f'--params {params_path}') #let train.py search
 
 		#ASSIGN NEW STRINGS TO OBJECT
 		obj['metadata']['name'] = new_job_str
