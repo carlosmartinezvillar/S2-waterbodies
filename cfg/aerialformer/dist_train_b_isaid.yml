@@ -14,12 +14,12 @@ spec:
 
           resources:
             limits:
-              memory: 64G
+              memory: 50G
               cpu: 8
               nvidia.com/gpu: 2
               ephemeral-storage: 75G #isaid: 32GB + ~43 .pth(~25GB)?
             requests:
-              memory: 64G
+              memory: 50G
               cpu: 8
               nvidia.com/gpu: 2
               ephemeral-storage: 75G

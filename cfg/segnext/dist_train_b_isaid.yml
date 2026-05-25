@@ -9,18 +9,18 @@ spec:
 
       containers:
         - name: bench-box
-          image: docker.io/cimartinezvillar/benchmark-trainer:segnext
+          image: docker.io/cimartinezvillar/benchmark-trainer:cuda12.1base
           imagePullPolicy: Always
 
           resources:
             limits:
-              memory: 56G
+              memory: 48G
               cpu: 8
               nvidia.com/gpu: 2
               # nvidia.com/rtxa6000: 2           
               ephemeral-storage: 75G #isaid: ~75GB? (32GB + ~32 .pth(~25GB))
             requests:
-              memory: 56G
+              memory: 48G
               cpu: 8
               nvidia.com/gpu: 2
               # nvidia.com/rtxa6000: 2            
@@ -39,19 +39,17 @@ spec:
           command: ["/bin/sh","-c"]
           args:
           - |
-            git clone https://github.com/carlosmartinezvillar/SegNeXt.git;
-            cd SegNeXt;
+            git clone https://github.com/carlosmartinezvillar/lakes-segnext.git;
+            cd lakes-segnext;
             pip install -v -e .;
-            echo "Copying weights...";
-            mkdir ./pretrained;
-            cp -v /log_pvc/segnext_base_512x512_ade_160k.pth ./pretrained/;
             echo "Copying data...";
             mkdir ./data;
             cp -v /data_pvc/isaid.zip ./data/;
             unzip -q ./data/isaid.zip -d ./data/;
             rm ./data/isaid.zip;
-            bash ./tools/dist_train.sh ./local_configs/downstream/segnext_b_isaid.py 2 \
-              --cfg-options data.samples_per_gpu=4 data.workers_per_gpu=4 optim_wrapper.optimizer.lr=0.00003;
+            bash ./tools/dist_train.sh ./configs/segnext/segnext_b_isaid.py 2 \
+              --cfg-options train_dataloader.batch_size=4 \
+              train_dataloader.num_workers=4 optim_wrapper.optimizer.lr=0.00003;
             mv ./work_dirs ./segnext_b_isaid;
             cp -rv ./segnext_b_isaid /log_pvc;
 

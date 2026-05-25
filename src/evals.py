@@ -1,9 +1,10 @@
 '''
 What does this script need to do??
-1. Plot metrics per epoch for a model
-2. Plot best_unet mIoU for all models -- need to define range of models as arg to function
-3. Find best_unet epoch for a model
-4. Plot training loss for a model
+
+2. Plot best mIoU for all models -- plot_sorted_scores()
+3. Find best epoch for a model -- find_best_epoch()
+4. Plot training loss for a model -- plot_training_log()
+1. Plot metrics per epoch for a model -- plot_training_log()
 5. Plot a grid plot for two given hyperparameters colored by metric value -- MISSING
 '''
 
@@ -138,7 +139,7 @@ def find_best_epoch(log_path,metric='viou1'):
 	return best_epoch_value,best_epoch_index
 
 
-def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- fix to take any of the metrics
+def plot_sorted_scores(log_dir,hp_file,out_str,id_list=None,metric='viou1'): #<--- fix to take any of the metrics
 	'''
 	Iterate thru logs and find the best_unet model by IoU.
 	'''
@@ -176,11 +177,10 @@ def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- f
 	unet_indexed = {}
 	vits_indexed = {}
 	for row in HP_LIST:
-		if row['ID'] in id_list:
-			if row['MODEL'][0:4] == 'unet':
-				unet_indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
-			if row['MODEL'][0:3] == 'vit':
-				vits_indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
+		if row['MODEL'][0:4] == 'unet':
+			unet_indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
+		if row['MODEL'][0:3] == 'vit':
+			vits_indexed[row['ID']] = {k:row[k] for k in row if k!='ID'}
 
 	# separate array into vits and cnns
 	unet_max = []
@@ -250,7 +250,7 @@ def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- f
 	# BAR PLOT CNNs -- COLOR CODED
 	plt.figure(figsize=(30,15))
 	plt.bar(range(len(sorted_unet_ids)),sorted_unet_max,color=bar_colors_unet,linewidth=0.75)
-	plt.title('Validation Set Performance by Model (n=320)')
+	plt.title(f'Validation Set Performance by Model (n={len(HP_LIST)})')
 	plt.xlabel('Model')
 	plt.ylabel("Validation IoU (water)")
 	# plt.xticks(ticks=range(len(sorted_unet_ids)),labels=sorted_unet_names,rotation=90)
@@ -265,14 +265,14 @@ def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- f
 	best_unet_sorted_idx   = np.argsort(best_unet_max)
 	best_unet_sorted_max   = np.array(best_unet_max)[best_unet_sorted_idx]
 	best_unet_sorted_names = np.array(best_unet_names)[best_unet_sorted_idx]
-	plt.figure(figsize=(30,15))
-	plt.bar(best_unet_sorted_names,best_unet_sorted_max,color='C2',linewidth=0.75)	
-	plt.title('Validation Set Performance by Model (n=6)')
-	plt.xlabel('Model')
-	plt.ylabel("Validation IoU (water)")
-	plt.xticks(rotation=90)
-	plt.savefig(f"../fig/{out_str}_unique.png")
-	plt.close()	
+	# plt.figure(figsize=(30,15))
+	# plt.bar(best_unet_sorted_names,best_unet_sorted_max,color='C2',linewidth=0.75)	
+	# plt.title('Validation Set Performance by Model (n=6)')
+	# plt.xlabel('Model')
+	# plt.ylabel("Validation IoU (water)")
+	# plt.xticks(rotation=90)
+	# plt.savefig(f"../fig/{out_str}_unique.png")
+	# plt.close()	
 
 	# BOXPLOT CNNs UNIQUE MODEL NAME
 	boxplot_names  = [name for name in best_unet] #dict only guarantees insertion order?
@@ -283,7 +283,7 @@ def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- f
 	plt.boxplot(boxplot_sorted_values,tick_labels=boxplot_sorted_names)
 	plt.xlabel('Model')
 	plt.ylabel("Validation IoU (water pixels)")
-	plt.title('Model Performance, Sorted by Max Validation IoU (n=320)')
+	plt.title(f'Model Performance, Sorted by Max Validation IoU (n={len(HP_LIST)})')
 	plt.xticks(rotation=90)
 	plt.savefig(f"../fig/{out_str}_boxplot.png")
 	plt.close()
@@ -293,7 +293,8 @@ def find_best_performer(log_dir,hp_file,out_str,id_list,metric='viou1'): #<--- f
 	######
 
 
-def get_parameter_performance(log_dir,hp_file,out_str,id_list):
+# <<< THIS NEEDS REFACTORING TO A SIMPLER DICT VERSION >>>>
+def get_all_parameter_performance(log_dir,hp_file,out_str,id_list=None):
 	'''
 	A function to plot the distribution of IoU (positive class) over the parameters
 	'''
@@ -311,6 +312,9 @@ def get_parameter_performance(log_dir,hp_file,out_str,id_list):
 	# 		models[row['MODEL']].append({k:row[k] for k in row if k!='MODEL'})
 	# 	else:
 	# 		models[row['MODEL']] = [{k:row[k] for k in row if k!='MODEL'}]
+
+	if id_list is None: #keep id_list to skip entries if needed.
+		id_list = [row['ID'] for row in HP_LIST]
 
 	#DICT OF IDS
 	id_dict = {row['ID']:row for row in HP_LIST if row['ID'] in id_list}
@@ -356,7 +360,7 @@ def get_parameter_performance(log_dir,hp_file,out_str,id_list):
 	plt.savefig(f"../fig/learning_rates_batch16_{out_str}.png")
 
 
-	# ALL MODELS -- PLOT LEARNING V IOU WATER AT BATCH 32
+	# ALL MODELS -- PLOT LEARNING RATE V IOU WATER AT BATCH 32
 	b32_indices = np.array(batches) == 32
 	b32_ious = np.array(ious)[b32_indices]
 	b32_lrates = np.array(lrates)[b32_indices]
@@ -403,12 +407,13 @@ def get_parameter_performance(log_dir,hp_file,out_str,id_list):
 	ax.set_ylim(0.45,0.90)
 	plt.savefig(f"../fig/decay_{out_str}.png")	
 
-	#PLOT DECAY VS LR IN GRID
+	#PLOT DECAY VS LR IN GRID -- MISSING
+	pass
 
 	return
 
 
-def get_model_parameter_performance(log_dir,hp_file,model_str,id_list):
+def get_parameter_performance(log_dir,hp_file,model_str,id_list=None):
 
 	if log_dir[-1] == '/':
 		log_dir = log_dir.rstrip('/')
@@ -416,6 +421,9 @@ def get_model_parameter_performance(log_dir,hp_file,model_str,id_list):
 	assert os.path.isfile(hp_file), f"No {hp_file} found."
 	with open(hp_file,'r') as fp:
 		HP_LIST = [json.loads(line) for line in fp.readlines() if line != '\n']
+
+	if id_list is None: # keep id_list to skip rows if needed.
+		id_list = [row['ID'] for row in HP_LIST]
 
 	# DICT OF MODEL NAMES CONTAINING A LIST OF HP ROWS (EACH ID WITH MODEL STRING)
 	models = {}
@@ -517,25 +525,24 @@ def get_model_parameter_performance(log_dir,hp_file,model_str,id_list):
 if __name__ == '__main__':
 
 	#ARGS
-	# params_file = '../hpo/params.json'
 	parser = argparse.ArgumentParser(description="Plot and summarize train logs.")
 	parser.add_argument('--logs',default=None,help="Dir to read the logs from.")
-	parser.add_argument('--params',default=None,help="Parameter file (JSON).")
+	# parser.add_argument('--params',default=None,help="Parameter file (JSON).")
 	args = parser.parse_args()
 	assert os.path.isdir(args.logs),f"No path found for {args.logs}"
-	assert args.params is not None, "No parameter file given."
-	assert os.path.isfile(args.params),f"No parameter file found in {args.params}"
-	params_file = args.params
+	# assert args.params is not None, "No parameter file given."
+	# assert os.path.isfile(args.params),f"No parameter file found in {args.params}"
+	# params_file = args.params
 
 	# TRIAL 1
-	trial_1 = list(range(101,420+1))
-	# find_best_performer(args.logs,params_file,'trial1',trial_1)
-	# get_parameter_performance(args.logs,params_file,'trial1',trial_1)
-	# get_model_parameter_performance(args.logs,params_file,'unet6_1',trial_1)
-	# get_model_parameter_performance(args.logs,params_file,'unet3_1',trial_1)
-	# get_model_parameter_performance(args.logs,params_file,'unet2_2',trial_1)
-	# get_model_parameter_performance(args.logs,params_file,'unet5_1',trial_1)
-	# get_model_parameter_performance(args.logs,params_file,'unet2_1',trial_1)
+	# plot_sorted_scores(args.logs,params_file,'trial1',trial_1)
+	plot_sorted_scores(args.logs,'../hpo/trial1.json','trial1')
+	# get_all_parameter_performance(args.logs,params_file,'trial1',trial_1)
+	# get_parameter_performance(args.logs,params_file,'unet6_1',trial_1)
+	# get_parameter_performance(args.logs,params_file,'unet3_1',trial_1)
+	# get_parameter_performance(args.logs,params_file,'unet2_2',trial_1)
+	# get_parameter_performance(args.logs,params_file,'unet5_1',trial_1)
+	# get_parameter_performance(args.logs,params_file,'unet2_1',trial_1)
 
 	#Best 2 of each
 	# plot_training_log(f"{args.logs}/epoch_log_268.tsv") #unet6_1
@@ -546,5 +553,4 @@ if __name__ == '__main__':
 	# plot_training_log(f"{args.logs}/epoch_log_110.tsv") #unet2_2
 
 	# TRIAL 2
-	trial_2 = list(range(421,540+1))
-	find_best_performer(args.logs,params_file,'trial2',trial_2)
+	plot_sorted_scores(args.logs,'../hpo/trial2.json','trial2')

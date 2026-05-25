@@ -14,15 +14,17 @@ spec:
 
           resources:
             limits:
-              memory: 48G
+              memory: 40G
               cpu: 4
-              nvidia.com/rtxa6000: 1              
-              ephemeral-storage: 60G #isaid: 32GB + ~32 .pth(~25GB)?
+              nvidia.com/gpu: 1
+              # nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 50G #isaid: 32GB + ~32 .pth(~25GB)?
             requests:
-              memory: 48G
+              memory: 40G
               cpu: 4
-              nvidia.com/rtxa6000: 1              
-              ephemeral-storage: 60G
+              nvidia.com/gpu: 1
+              # nvidia.com/rtxa6000: 1              
+              ephemeral-storage: 50G
 
           volumeMounts:
             - mountPath: /data_pvc
@@ -73,8 +75,8 @@ spec:
                 - key: nvidia.com/gpu.product
                   operator: In
                   values:
-                  # - NVIDIA-GeForce-RTX-3090
-                  - NVIDIA-RTX-A6000   
+                  - NVIDIA-GeForce-RTX-3090
+                  # - NVIDIA-RTX-A6000   
 
 
   backoffLimit: 0
