@@ -9,6 +9,7 @@ from tqdm import tqdm
 import argparse
 import json
 from functools import wraps
+import inspect
 
 import utils
 import model
@@ -357,25 +358,36 @@ if __name__ == "__main__":
 		CUDA_DEV = torch.device("cpu")
 
 	#---------- INPUT BANDS -----------------------------------------------------------------------
-	assert HP['BANDS'] in [3,4],"INCORRECT BAND NR IN JSON HYPERPARAMETER FILE."
+	assert HP['BANDS'] in [3,4],"INCORRECT BAND NR IN JSON HYPERPARAMETER DICT."
 	n_bands = HP['BANDS']
 
 	#---------- OUTPUT CHANNELS -------------------------------------------------------------------
-	assert HP['OUTPUTS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HP FILE."
+	assert HP['OUTPUTS'] in [2,3], "INCORRECT # OF CLASSES SET IN JSON HYPERPARAMETER DICT."
 	n_classes = HP['OUTPUTS'] 
 
 	#---------- SET ALL SEEDS ----------------------------------------------------------------------
-	assert HP['SEED'] in (0,1), "INCORRECT SEED VALUE IN JSON PARAMETER DICT."
+	assert HP['SEED'] in (0,1), "INCORRECT SEED VALUE IN JSON HYPEPARAMETER DICT."
 	if HP['SEED'] == True:
 		utils.set_seed(476)
 
 	#---------- MODEL -----------------------------------------------------------------------------
-	model_str = HP['MODEL'][0:4]
-	assert model_str in ["vits","unet"], "INCORRECT MODEL STRING."
-	if model_str == 'unet':
-		net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
-	if model_str == 'vits':
-		net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
+	# model_str = HP['MODEL'][0:4]
+	# assert model_str in ["vits","unet"], "INCORRECT MODEL STRING."
+	# if model_str == 'unet':
+		# net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
+	# if model_str == 'vits':
+		# net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
+
+	#CHANGING TO SIMPLER
+	model_classes = []
+	for name,obj in inspect.getmembers(model,inspect.isclass):
+		if obj.__module__ == module.__name__:
+			model_classes.append(obj)
+	model_classes_str = [c.__name__ for c in model_classes]
+
+	assert HP['MODEL'] in model_classes_str, "INCORRECT MODEL STRING IN HYPERPARAMETER DICT"
+
+	net = eval(f"model.{HP['MODEL']}({HP['ID']},in_channels={n_bands})")
 
 	# TO GPU
 	net = net.to(CUDA_DEV)
@@ -391,7 +403,7 @@ if __name__ == "__main__":
 		loss_fn = None
 
 	#---------- OPTIMIZER -------------------------------------------------------------------------
-	assert HP["LEARNING_RATE"] in [0.0001,0.00025,0.0005,0.00075,0.001],"LR OUT OF RANGE."
+	# assert HP["LEARNING_RATE"] in [0.0001,0.00025,0.0005,0.00075,0.001],"LR OUT OF RANGE."
 	assert HP["OPTIM"] in ["adam","sgd","adamw"], "INCORRECT STRING FOR OPTIMIZER IN DICT."
 
 	if HP['OPTIM'] == "adam":
@@ -400,7 +412,7 @@ if __name__ == "__main__":
 		optimizer = torch.optim.SGD(net.parameters(),lr=HP['LEARNING_RATE'])
 	if HP['OPTIM'] == 'adamw':
 		assert "DECAY" in HP, "DECAY UNDEFINED FOR ADAMW RUN."
-		assert HP["DECAY"] in [0.01,0.001,0.0001,0.00001,0.000001], "DECAY OUT OF RANGE."
+		# assert HP["DECAY"] in [0.01,0.001,0.0001,0.00001,0.000001], "DECAY OUT OF RANGE."
 		optimizer = torch.optim.AdamW(net.parameters(),lr=HP['LEARNING_RATE'],
 			weight_decay=HP["DECAY"])
 

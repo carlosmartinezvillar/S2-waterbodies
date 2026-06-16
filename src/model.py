@@ -8,7 +8,7 @@ all_models = [
 	"UNet5_2","UNet5_3","UNet5_4","UNet6_1"]
 
 ##############################
-#INPUT AND OUTPUT LAYERS
+# CONVOLUTIONAL BLOCKS
 ##############################
 class EmbeddingLayer(nn.Module):
 	def __init__(self,i_ch,o_ch):
@@ -26,9 +26,6 @@ class LastLayer(nn.Module):
 	def forward(self,x):
 		return self.conv(x)
 
-##############################
-# CONVOLUTIONAL BLOCKS
-##############################
 #UNet1_x
 class ConvBlock1(nn.Module):
 	def __init__(self,i_ch,o_ch,block_type='A'):
@@ -1238,26 +1235,276 @@ class UNet6_1(nn.Module):
 
 
 ################################################################################
-# TRANSFORMERS
+# ViTs
 ################################################################################
-class SegFormer_0(nn.Module):
-	def __init__(self,in_channels=3,out_channels=2):
-		super(SegFormer_0,self).__init__()
-		self.model_name = 'segformer_0'
-		self.model._id  = model_id
+class MultiHeadSelfAttention(nn.Module):
+	'''
+	MHSA layer
+	D: embedding dimensino
+	H: nr heads
+	'''
+    def __init__(self, D, H):
+        super().__init__()
+
+        assert D % H == 0
+
+        self.D = D
+        self.H = H
+        self.head_dim = D // H
+        self.qkv  = nn.Linear(D, D * 3)
+        self.proj = nn.Linear(D, D)
+
+    def forward(self, x):
+        B, N, D = x.shape
+        qkv = self.qkv(x)  # (B, N, 3D)
+        qkv = qkv.reshape(B, N, 3, self.H, self.head_dim)
+        qkv = qkv.permute(2,0,3,1,4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        attn = (q @ k.transpose(-2, -1))
+        attn = attn / (self.head_dim ** 0.5)
+        attn = attn.softmax(dim=-1)
+
+        out = attn @ v
+        out = out.transpose(1, 2)
+        out = out.reshape(B, N, D)
+
+        return self.proj(out)
+
+
+class MLP(nn.Module):
+	'''
+	Vanilla MLP layer in transformer block
+	'''
+    def __init__(self, dim, mlp_ratio=4):
+        super().__init__()
+        hidden_dim = dim * mlp_ratio
+        self.layers = nn.Sequential(
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, dim)
+        )
+
+    def forward(self, x):
+        return self.layers(x)
+
+
+class EncoderAttentionLayer(nn.Module):
+	'''
+	A complete ViT layer (i.e. MHSA + MLP)
+	'''
+	def __init__(self,D,H,mlp_ratio=4):
+		super().__init__()
+		self.norm1 = nn.LayerNorm(D)
+        self.attn  = MultiHeadSelfAttention(D,H)
+        self.norm2 = nn.LayerNorm(D)
+        self.mlp   = MLP(D, mlp_ratio)
+
+    def forward(self, x):
+        x = x + self.attn(self.norm1(x))
+        x = x + self.mlp(self.norm2(x))
+        return x
+
+
+class TransformerStage(nn.Module):
+	'''
+	'Block' grouping multiple MHSA ops. Equivalent to 'convolutional' block in CNNs above. 
+	'''
+	def __init__(self,E,num_heads,depth,H,W):
+		super().__init__()
+		self.layers = nn.ModuleList([EncoderAttentionLayer(D,H) for _ in range(depth)])
+		self.pos_embedding = nn.Parameter(torch.randn(1,H*W,dim) * 0.02)
+		self.downsample = PatchMerging(D)
+
+	def forward(self,x,H,W):
+		x = x + self.pos_embedding
+		for layer in self.layers:
+			x = layer(x)
+		skip = x #to decoder
+		x, H, W = self.downsample(x,H,W)
+		return x,skip,H,W
+
+
+class PatchEmbedding(nn.Module):
+	'''
+	Standard ViT patch embedding
+	'''
+    def __init__(self, img_size=256,patch_size=4,in_channels=3,embed_dim=64):
+        super().__init__()
+
+        self.num_patches = (img_size // patch_size) ** 2
+        self.projector   = nn.Conv2d(
+            in_channels,
+            embed_dim,
+            kernel_size=patch_size,
+            stride=patch_size
+        )
+
+    def forward(self, x): # x: (B, C, H, W)
+        x = self.projector(x) # (B, E, H/P, W/P)
+        x = x.flatten(2) # (B, E, N)
+        x = x.transpose(1, 2) # (B, N, E)
+        return x
+
+
+class PatchMerging(nn.Module):
+	'''
+	Spatial resolution downsampler. Checkerboard pattern.
+	'''
+    def __init__(self, dim):
+        super().__init__()
+        self.norm = nn.LayerNorm(4 * dim)
+        self.reduction = nn.Linear(4*dim,2*dim)
+
+    def forward(self, x, H, W):
+    	# shapes & rearrange
+        B, N, E = x.shape
+        x = x.view(B, H, W, E)
+
+        # sections
+        x00 = x[:, 0::2, 0::2, :] #checkerboard pattern
+        x01 = x[:, 1::2, 0::2, :]
+        x10 = x[:, 0::2, 1::2, :]
+        x11 = x[:, 1::2, 1::2, :]
+
+        # 4C channels
+        x = torch.cat([x00, x01, x10, x11],dim=-1)
+        H //= 2
+        W //= 2
+        x = x.view(B, H * W, 4 * E)
+        x = self.norm(x)
+        x = self.reduction(x) #2C
+
+        # (B,H/2*W/2,2C)
+        return x, H, W	
+
+
+class PatchMergingConv(nn.Module):
+	'''
+	Spatial resolution downsampling. Strided convolution.
+	'''
+	def __init__(self,dim):
+		super().__init__()
+		self.projector = nn.Conv2d(in_channels=dim,out_channels=2*dim,kernel_size=2,stride=2)
+		# self.norm      = nn.BatchNorm2d(2*dim)
+
+	def forward(self,x,H,W):
+		B,N,E = x.shape
+		x = x.view(B,H,W,E).permute(0,3,1,2) #->[B,C,H,W]
+		x = self.projector(x)
+		# x = self.norm(x)
+		_,new_C,new_H,new_W = x.shape
+		x = x.flatten(2).transpose(1,2) # [B,N,E]
+		return x, new_H, new_W
+
+
+class AttentionEncoder(nn.Module):
+	'''
+	N: Sequence length
+	D: Embedding size
+	H: Head dimensions
+	'''
+
+	def __init__(self,i_ch=3):
+		super(AttentionEncoder,self).__init__()
+
+		#LAYERS
+		self.patch_embed = PatchEmbedding(img_size=256,patch_size=4,in_channels=i_ch,embed_dim=64)
+		self.stage1 = TransformerStage(D=64,depth=2,num_heads=4)
+		self.merge1 = PatchMerging(64)
+		self.stage2 = TransformerStage(D=128,depth=2,num_heads=4)
+		self.merge2 = PatchMerging(128)
+		self.stage3 = TransformerStage(D=256,depth=2,num_heads=4)
+		self.merge3 = PatchMerging(256)
+		self.stage4 = TransformerStage(D=512,depth=2,num_heads=4)
+		self.merge4 = PatchMerging(512)
+		self.stage5 = TransformerStage(D=1024,depth=2,num_heads=4)	
+
+	def forward(self,x):
+		x, H, W = self.patch_embed(x) #64x64
+
+		x = self.stage1(x)
+		s1 = x
+		x, H, W = self.merge1(x, H, W) # 32x32
+
+		x = self.stage2(x)
+		s2 = x
+		x, H, W = self.merge2(x, H, W) # 16x16
+
+		x = self.stage3(x)
+		s3 = x
+		x, H, W = self.merge3(x, H, W) # 8x8
+
+		x = self.stage4(x)
+		s4 = x
+		x, H, W = self.merge4(x, H, W) # 4x4
+
+		x = self.stage5(x)
+		s5 = x
+
+		return s1,s2,s3,s4,s5
+
+
+class AttentionDecoder(nn.Module):
+	'''
+	Class to process embedding (encoder outputs) into image segmentation mask.
+
+	N: Sequence length
+	D: Embedding size
+	H: Nr. of attention heads
+	input_dim: embedding input dimensions
+	output_dim: segmentation mask dimensions
+	'''
+
+	def __init__(self,N,D,H,input_dim,output_dim):
+		super(AttentionEncoder,self).__init__()
+
+	def forward(self,x):
+		return x
+
+
+################################################################################
+# COMBINED UNETS 
+################################################################################
+class ConvolutionAttention(nn.Module):
+	def __init__(self,N,D,H):
+		'''
+		CNN encoding & ViT decoding
+		'''
+		super(ConvolutionAttention,self).__init__()
+		self.Encoder = None
+		self.Decoder = AttentionDecoder(N,D,H,input_dim,output_dim)
 
 
 	def forward(self,x):
 		return x
 
 
-class AerialFormer_0(nn.Module):
-	def __init__(self,model_id,in_channels=3,out_channels=2):
-		super().__init__()
+class AttentionConvolution(nn.Module):
+	'''
+	ViT encoding & CNN decoding
+	'''
+	def __init__(self,N,D,H):
+		super(AttentionConvolution,self).__init__()
+
+		self.Encoder = AttentionEncoder(N,D,H)
 
 	def forward(self,x):
-		pass
+		return x
 
+
+class AttentionAttention(nn.Module):
+	'''
+	ViT encoding and decoding
+	'''
+	def __init__(self,N,D,H):
+		super(AttentionAttention,self).__init__()
+
+	def forward(self,x):
+		return x
+
+		
+# CNN encoding and decoding: UNet6_1
 
 ################################################################################
 # LOSSES
