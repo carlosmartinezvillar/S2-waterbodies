@@ -18,6 +18,21 @@ def sequence_hyperparameters(out_file_path,id_start,trial):
 	The list is stored in out_path in .json format and created using a 
 	cross-product (all-by-all) of the parameters provided.
 	'''
+	# Each parameter -- Trial 0 -- debugging
+	if trial == 0:
+		seeds = [1]	
+		epoch = [10]
+		lrate = [0.00001,0.0005]	
+		sched = ["none"]
+		optim = ["adamw"]
+		decay = [0.001,0.0001]
+		loss  = ["ce"]	
+		batch = [16,32]
+		inits = ["random"]
+		bands = [3]
+		label = [2]
+		model = ["UNet3_1","UNet6_1"]
+
 	# Each parameter -- Trial 1
 	if trial == 1:
 		seeds = [1]	
@@ -64,7 +79,7 @@ def sequence_hyperparameters(out_file_path,id_start,trial):
 		inits = ["random"]
 		bands = [4]
 		label = [2]
-		model = ["unet2_1","unet2_2","unet2_4"] #best 5? from trial 1
+		model = ["UNet2_1","UNet2_2","UNet2_4"] #best 5? from trial 1
 
 	# Each parameter -- Trial 4 Best unseeded 100 epochs
 	if trial == 4:
@@ -79,7 +94,7 @@ def sequence_hyperparameters(out_file_path,id_start,trial):
 		inits = ["random"]
 		bands = [4]
 		label = [2]
-		model = ["unet6_1"] #best 5? from trial 1
+		model = ["UNet6_1"] #best 5? from trial 1
 
 	# Cross-product
 	hp = list(itertools.product(seeds,epoch,lrate,sched,optim,decay,loss,batch,inits,bands,label,model))
@@ -118,11 +133,12 @@ if __name__ == '__main__':
 	# 	help="Create a JSON file with a combination of hyperparameters.")
 	# args = parser.parse_args()
 
-
+	out_file_path = '../hpo/trial0.json'
 	# out_file_path = '../hpo/trial1.json'
-	out_file_path = '../hpo/trial2.json'
+	# out_file_path = '../hpo/trial2.json'
 		
 	assert not os.path.isfile(out_file_path), f"Overwriting existing file {out_file_path}"
 
+	sequence_hyperparameters(out_file_path,id_start=10,trial=0)
 	# sequence_hyperparameters(out_file_path,id_start=101,trial=1)		
-	sequence_hyperparameters(out_file_path,id_start=421,trial=2)
+	# sequence_hyperparameters(out_file_path,id_start=421,trial=2)

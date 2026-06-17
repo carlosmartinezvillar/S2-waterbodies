@@ -36,7 +36,7 @@ def launch_jobs(template_path,params_path,job_nrs):
 		#SET THE NEW STRINGS FOR THIS ROW
 		new_job_str = old_job_str.replace('-0',f'-{model_id}')
 		new_cmd_str = old_cmd_str.replace(
-			'--row 0;',f'--row {model_id};').replace(
+			'--id 0;',f'--id {model_id};').replace(
 			'--params ../hpo/params.json',f'--params {params_path}') #let train.py search
 
 		#ASSIGN NEW STRINGS TO OBJECT
@@ -76,26 +76,6 @@ def clear_jobs(start,end):
 			except Exception as e:
 				print(f"ERROR DELETING JOB {job}")
 				print(e)
-
-	# if (start is None) and (end is None): #delete all
-		# for job in jobs:
-			# del_out = sp.run(f"kubectl delete job {job}",capture_output=True,text=True,shell=True)
-			# print(del_out.stdout)
-	
-	# if (start is None) and (end is not None): #delete (0,end]
-		# for i in jobnr[:jobnr.index(end)+1]:
-			# del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-			# print(del_out.stdout)
-
-	# if (start is not None) and (end is None): #delete [start,N)
-	# 	for i in jobnr[jobnr.index(start):]:
-	# 		del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-	# 		print(del_out.stdout)
-
-	# if (start is not None) and (end is not None): #delete [start,end]
-	# 	for i in jobnr[jobnr.index(start):jobnr.index(end)+1]:
-	# 		del_out = sp.run(f"kubectl delete job train-job-{i}",capture_output=True,text=True,shell=True)
-	# 		print(del_out.stdout)
 
 
 def cancel_pending():

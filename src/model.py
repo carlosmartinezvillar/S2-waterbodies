@@ -721,12 +721,12 @@ class UNet3_1(nn.Module):
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
 		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=1,padding=1)
 		self.encoder_1 = ConvBlock3(32,32)
-		self.encoder_2 = ConvBlock3(64,64)
-		self.encoder_3 = ConvBlock3(128,128)
-		self.encoder_4 = ConvBlock3(256,256)
 		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
+		self.encoder_2 = ConvBlock3(64,64)
 		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
+		self.encoder_3 = ConvBlock3(128,128)
 		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
+		self.encoder_4 = ConvBlock3(256,256)
 		self.down_op_4 = nn.Conv2d(256,512,**down_op_params)
 
 		# BOTTLENECK
@@ -735,12 +735,12 @@ class UNet3_1(nn.Module):
 		# DECODER
 		up_op_params = {'kernel_size':2,'stride':2,'bias':False}
 		self.decoder_4 = ConvBlock3(512,512)
-		self.decoder_3 = ConvBlock3(256,256)
-		self.decoder_2 = ConvBlock3(128,128)
-		self.decoder_1 = ConvBlock3(64,64)
 		self.up_op_4 = nn.ConvTranspose2d(512,256,**up_op_params)
-		self.up_op_3 = nn.ConvTranspose2d(512,128,**up_op_params)
+		self.decoder_3 = ConvBlock3(256,256)
+		self.up_op_3 = nn.ConvTranspose2d(512,128,**up_op_params)		
+		self.decoder_2 = ConvBlock3(128,128)
 		self.up_op_2 = nn.ConvTranspose2d(256,64,**up_op_params)
+		self.decoder_1 = ConvBlock3(64,64)
 		self.up_op_1 = nn.ConvTranspose2d(128,32,**up_op_params)
 
 		# LAST LAYER
@@ -1243,50 +1243,48 @@ class MultiHeadSelfAttention(nn.Module):
 	D: embedding dimensino
 	H: nr heads
 	'''
-    def __init__(self, D, H):
-        super().__init__()
+	def __init__(self, D, H):
+		super().__init__()
+		assert D % H == 0
+		self.D = D
+		self.H = H
+		self.head_dim = D // H
+		self.qkv  = nn.Linear(D, D * 3)
+		self.proj = nn.Linear(D, D)
 
-        assert D % H == 0
+	def forward(self, x):
+		B, N, D = x.shape
+		qkv = self.qkv(x)  # (B, N, 3D)
+		qkv = qkv.reshape(B, N, 3, self.H, self.head_dim)
+		qkv = qkv.permute(2,0,3,1,4)
+		q, k, v = qkv[0], qkv[1], qkv[2]
 
-        self.D = D
-        self.H = H
-        self.head_dim = D // H
-        self.qkv  = nn.Linear(D, D * 3)
-        self.proj = nn.Linear(D, D)
+		attn = (q @ k.transpose(-2, -1))
+		attn = attn / (self.head_dim ** 0.5)
+		attn = attn.softmax(dim=-1)
 
-    def forward(self, x):
-        B, N, D = x.shape
-        qkv = self.qkv(x)  # (B, N, 3D)
-        qkv = qkv.reshape(B, N, 3, self.H, self.head_dim)
-        qkv = qkv.permute(2,0,3,1,4)
-        q, k, v = qkv[0], qkv[1], qkv[2]
+		out = attn @ v
+		out = out.transpose(1, 2)
+		out = out.reshape(B, N, D)
 
-        attn = (q @ k.transpose(-2, -1))
-        attn = attn / (self.head_dim ** 0.5)
-        attn = attn.softmax(dim=-1)
-
-        out = attn @ v
-        out = out.transpose(1, 2)
-        out = out.reshape(B, N, D)
-
-        return self.proj(out)
+		return self.proj(out)
 
 
 class MLP(nn.Module):
 	'''
 	Vanilla MLP layer in transformer block
 	'''
-    def __init__(self, dim, mlp_ratio=4):
-        super().__init__()
-        hidden_dim = dim * mlp_ratio
-        self.layers = nn.Sequential(
-            nn.Linear(dim, hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, dim)
-        )
+	def __init__(self, dim, mlp_ratio=4):
+		super().__init__()
+		hidden_dim = dim * mlp_ratio
+		self.layers = nn.Sequential(
+		    nn.Linear(dim, hidden_dim),
+		    nn.GELU(),
+		    nn.Linear(hidden_dim, dim)
+		)
 
-    def forward(self, x):
-        return self.layers(x)
+	def forward(self, x):
+		return self.layers(x)
 
 
 class EncoderAttentionLayer(nn.Module):
@@ -1296,14 +1294,14 @@ class EncoderAttentionLayer(nn.Module):
 	def __init__(self,D,H,mlp_ratio=4):
 		super().__init__()
 		self.norm1 = nn.LayerNorm(D)
-        self.attn  = MultiHeadSelfAttention(D,H)
-        self.norm2 = nn.LayerNorm(D)
-        self.mlp   = MLP(D, mlp_ratio)
+		self.attn  = MultiHeadSelfAttention(D,H)
+		self.norm2 = nn.LayerNorm(D)
+		self.mlp   = MLP(D, mlp_ratio)
 
-    def forward(self, x):
-        x = x + self.attn(self.norm1(x))
-        x = x + self.mlp(self.norm2(x))
-        return x
+	def forward(self, x):
+		x = x + self.attn(self.norm1(x))
+		x = x + self.mlp(self.norm2(x))
+		return x
 
 
 class TransformerStage(nn.Module):
@@ -1329,54 +1327,54 @@ class PatchEmbedding(nn.Module):
 	'''
 	Standard ViT patch embedding
 	'''
-    def __init__(self, img_size=256,patch_size=4,in_channels=3,embed_dim=64):
-        super().__init__()
+	def __init__(self, img_size=256,patch_size=4,in_channels=3,embed_dim=64):
+		super().__init__()
 
-        self.num_patches = (img_size // patch_size) ** 2
-        self.projector   = nn.Conv2d(
-            in_channels,
-            embed_dim,
-            kernel_size=patch_size,
-            stride=patch_size
-        )
+		self.num_patches = (img_size // patch_size) ** 2
+		self.projector   = nn.Conv2d(
+		    in_channels,
+		    embed_dim,
+		    kernel_size=patch_size,
+		    stride=patch_size
+		)
 
-    def forward(self, x): # x: (B, C, H, W)
-        x = self.projector(x) # (B, E, H/P, W/P)
-        x = x.flatten(2) # (B, E, N)
-        x = x.transpose(1, 2) # (B, N, E)
-        return x
+	def forward(self, x): # x: (B, C, H, W)
+		x = self.projector(x) # (B, E, H/P, W/P)
+		x = x.flatten(2) # (B, E, N)
+		x = x.transpose(1, 2) # (B, N, E)
+		return x
 
 
 class PatchMerging(nn.Module):
 	'''
 	Spatial resolution downsampler. Checkerboard pattern.
 	'''
-    def __init__(self, dim):
-        super().__init__()
-        self.norm = nn.LayerNorm(4 * dim)
-        self.reduction = nn.Linear(4*dim,2*dim)
+	def __init__(self, dim):
+		super().__init__()
+		self.norm = nn.LayerNorm(4 * dim)
+		self.reduction = nn.Linear(4*dim,2*dim)
 
-    def forward(self, x, H, W):
-    	# shapes & rearrange
-        B, N, E = x.shape
-        x = x.view(B, H, W, E)
+	def forward(self, x, H, W):
+		# shapes & rearrange
+		B, N, E = x.shape
+		x = x.view(B, H, W, E)
 
-        # sections
-        x00 = x[:, 0::2, 0::2, :] #checkerboard pattern
-        x01 = x[:, 1::2, 0::2, :]
-        x10 = x[:, 0::2, 1::2, :]
-        x11 = x[:, 1::2, 1::2, :]
+		# sections
+		x00 = x[:, 0::2, 0::2, :] #checkerboard pattern
+		x01 = x[:, 1::2, 0::2, :]
+		x10 = x[:, 0::2, 1::2, :]
+		x11 = x[:, 1::2, 1::2, :]
 
-        # 4C channels
-        x = torch.cat([x00, x01, x10, x11],dim=-1)
-        H //= 2
-        W //= 2
-        x = x.view(B, H * W, 4 * E)
-        x = self.norm(x)
-        x = self.reduction(x) #2C
+		# 4C channels
+		x = torch.cat([x00, x01, x10, x11],dim=-1)
+		H //= 2
+		W //= 2
+		x = x.view(B, H * W, 4 * E)
+		x = self.norm(x)
+		x = self.reduction(x) #2C
 
-        # (B,H/2*W/2,2C)
-        return x, H, W	
+		# (B,H/2*W/2,2C)
+		return x, H, W	
 
 
 class PatchMergingConv(nn.Module):

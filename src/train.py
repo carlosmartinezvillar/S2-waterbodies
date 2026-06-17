@@ -30,15 +30,17 @@ required.add_argument('--net-dir',required=True,
 	help='Directory where the weights of trained models are dumped.')
 required.add_argument('--log-dir',required=True,default='../log',
 	help='Training logs directory.')
-required.add_argument('--row',required=True,type=int,default=0,
-	help='Model id number in JSON hyperparameter file (default ../hpo/params.json).')
+required.add_argument('-p','--params',required=True,default=None,
+	help='Path to JSON hyperparameter file (if not default).')
+required.add_argument('--id',required=True,type=int,default=0,
+	help='Model id number in JSON hyperparameter file.')
 
 optional.add_argument('--gpu',required=False,type=int,default=0,
 	help='GPU id to train in, if different than 0. Useful to select a gpu in a multi-gpu machine.')
 optional.add_argument('--full',required=False,action='store_true',default=False,
 	help='Train on both training and validation sets (training final model).')
-optional.add_argument('-p','--params',required=False,default='../hpo/parameters.json',
-	help='Path to JSON hyperparameter file (if not default).')
+
+
 args = parser.parse_args()
 
 DATA_DIR  = args.data_dir
@@ -49,23 +51,24 @@ CUDA_DEV  = None
 ####################################################################################################
 # SOME HELPER FUNCTIONS
 ####################################################################################################
+@torch.no_grad()
 def calculate_metrics(confmat):
 	'''
 	Calculate precision, recall, accuracy, and IoU for a confusion matrix tensor.
 	'''
-	with torch.no_grad():
-		# Add stuff
-		TP = confmat.diagonal()
-		FP = confmat.sum(dim=0) - TP #this is silly but explicit
-		FN = confmat.sum(dim=1) - TP
-		TN = confmat.sum() - TP - FP - FN
-		# eps = 0.0000000001
 
-		# the metrics
-		ppv = TP / (TP + FP).clamp(min=1) #precision
-		tpr = TP / (TP + FN).clamp(min=1) #recall
-		acc = (TP+TN) / (TP+FN+FP+TN).clamp(min=1) #accuracy
-		iou = TP / (TP + FN + FP).clamp(min=1) #Intersection-over-Union
+	# Add stuff
+	TP = confmat.diagonal()
+	FP = confmat.sum(dim=0) - TP #this is silly but explicit
+	FN = confmat.sum(dim=1) - TP
+	TN = confmat.sum() - TP - FP - FN
+	# eps = 0.0000000001
+
+	# the metrics
+	ppv = TP / (TP + FP).clamp(min=1) #precision
+	tpr = TP / (TP + FN).clamp(min=1) #recall
+	acc = (TP+TN) / (TP+FN+FP+TN).clamp(min=1) #accuracy
+	iou = TP / (TP + FN + FP).clamp(min=1) #Intersection-over-Union
 
 	return ppv,tpr,acc,iou
 
@@ -75,7 +78,7 @@ def update_confusion_matrix(confmat,T,Y,n_classes):
 	'''
 	Update a confusion matrix tensor in gpu. Per-pixel classification.
 	'''
-	# confmat[0,0] += ((T==0) & (Y==0)).sum() #TN  #<--- change this to modulo op for more classes
+	# confmat[0,0] += ((T==0) & (Y==0)).sum() #TN
 	# confmat[0,1] += ((T==0) & (Y==1)).sum() #FP
 	# confmat[1,0] += ((T==1) & (Y==0)).sum() #FN
 	# confmat[1,1] += ((T==1) & (Y==1)).sum() #TP
@@ -346,7 +349,8 @@ if __name__ == "__main__":
 
 	# SEARCH BY ID
 	hp_list_indexed = {row['ID']:row for row in HP_LIST}
-	HP = hp_list_indexed[args.row]
+	assert args.id in hp_list_indexed, f"MODEL ID '{args.id}' NOT IN HYPERPARAMETER FILE."
+	HP = hp_list_indexed[args.id]
 
 	#---------- GPU  ------------------------------------------------------------------------------
 	# assert torch.cuda.is_available(), "torch.cuda.is_available() returned False"
@@ -371,22 +375,9 @@ if __name__ == "__main__":
 		utils.set_seed(476)
 
 	#---------- MODEL -----------------------------------------------------------------------------
-	# model_str = HP['MODEL'][0:4]
-	# assert model_str in ["vits","unet"], "INCORRECT MODEL STRING."
-	# if model_str == 'unet':
-		# net = eval(f"model.UNet{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
-	# if model_str == 'vits':
-		# net = eval(f"model.ViT{HP['MODEL'][4]}_{HP['MODEL'][6]}({HP['ID']},in_channels={n_bands})")
-
 	#CHANGING TO SIMPLER
-	model_classes = []
-	for name,obj in inspect.getmembers(model,inspect.isclass):
-		if obj.__module__ == module.__name__:
-			model_classes.append(obj)
-	model_classes_str = [c.__name__ for c in model_classes]
-
-	assert HP['MODEL'] in model_classes_str, "INCORRECT MODEL STRING IN HYPERPARAMETER DICT"
-
+	model_classes = [name for name,obj in inspect.getmembers(model,inspect.isclass)]
+	assert HP['MODEL'] in model_classes, "INCORRECT MODEL STRING IN HYPERPARAMETER DICT"
 	net = eval(f"model.{HP['MODEL']}({HP['ID']},in_channels={n_bands})")
 
 	# TO GPU

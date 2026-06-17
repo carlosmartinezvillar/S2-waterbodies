@@ -1,0 +1,16 @@
+{"ID": 10, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 11, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 12, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 13, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 14, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 15, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 16, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 17, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 1e-05, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 18, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 19, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 20, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 21, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 22, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 23, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 16, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
+{"ID": 24, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet3_1"}
+{"ID": 25, "SEED": 1, "EPOCHS": 10, "LEARNING_RATE": 0.0005, "SCHEDULER": "none", "OPTIM": "adamw", "DECAY": 0.0001, "LOSS": "ce", "BATCH": 32, "INIT": "random", "BANDS": 3, "OUTPUTS": 2, "MODEL": "UNet6_1"}
