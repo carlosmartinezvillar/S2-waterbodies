@@ -1308,7 +1308,7 @@ class TransformerStage(nn.Module):
 	'''
 	'Block' grouping multiple MHSA ops. Equivalent to 'convolutional' block in CNNs above. 
 	'''
-	def __init__(self,E,num_heads,depth,H,W):
+	def __init__(self,E,depth,num_heads,H,W):
 		super().__init__()
 		self.layers = nn.ModuleList([EncoderAttentionLayer(D,H) for _ in range(depth)])
 		self.pos_embedding = nn.Parameter(torch.randn(1,H*W,dim) * 0.02)
@@ -1403,12 +1403,12 @@ class AttentionEncoder(nn.Module):
 	H: Head dimensions
 	'''
 
-	def __init__(self,i_ch=3):
+	def __init__(self,model_id,in_channels=3):
 		super(AttentionEncoder,self).__init__()
 
 		#LAYERS
-		self.patch_embed = PatchEmbedding(img_size=256,patch_size=4,in_channels=i_ch,embed_dim=64)
-		self.stage1 = TransformerStage(D=64,depth=2,num_heads=4)
+		self.patch_embed = PatchEmbedding(img_size=256,patch_size=4,in_channels=in_channels,embed_dim=64)
+		self.stage1 = TransformerStage(E=64,depth=2,num_heads=4)
 		self.merge1 = PatchMerging(64)
 		self.stage2 = TransformerStage(D=128,depth=2,num_heads=4)
 		self.merge2 = PatchMerging(128)
@@ -1599,36 +1599,32 @@ def batch_cuda_memory(data_iter,model_str,batch_size):
 	print(f"AFTER FWD PASS:    {used_gb:.2f}/{total_gb:.2f} GB")
 
 
-def check_pass(data_iter,model_str=None):
+def check_pass(data_iter,model_str):
 	'''
 	CHECK FORWARD PASS + SHAPE + NUM OF PARAMETERS.
 	If model_str is None, check all models in array
 	'''
-	if model_str is None:		
-		test_these = all_models
-	else:
-		test_these = [model_str]
+	 #nevermind unit testing...
+	print('='*60)
+	print(f"TESTING FWD PASS ON {model_str}")
+	print('='*60)		
 
-	for _ in test_these: #nevermind unit testing...
-		print('='*60)
-		print(f"TESTING FWD PASS ON {_}")
-		print('='*60)		
-		net = eval(f"{_}('999',in_channels=3,out_channels=2)")
+	net = eval(f"{model_str}('999',in_channels=3)")
 
-		n_parameters = sum([p.numel() for p in net.parameters()])
-		print(f"# OF PARAMETERS: {n_parameters}")
+	n_parameters = sum([p.numel() for p in net.parameters()])
+	print(f"# OF PARAMETERS: {n_parameters}")
 
-		X,T = next(data_iter)
-		print(f"X: {X.shape} | T: {T.shape}")
-		y = net(X)
-		print(f"Y: {y.shape} -- GOOD.")
+	X,T = next(data_iter)
+	print(f"X: {X.shape} | T: {T.shape}")
+	y = net(X)
+	print(f"Y: {y.shape} -- GOOD.")
 
 
 def print_model_parameters(model_str):
 	'''
 	# NUM OF PARAMETERS PER MODULE (IN A SINGLE MODEL)	
 	'''
-	net = eval(f"{model_str}('999',in_channels=3,out_channels=2)")
+	net = eval(f"{model_str}('999',in_channels=3)")
 	P = [(p[0],p[1].numel(),p[1].shape) for p in net.named_parameters()]
 	P_sum = 0
 	print(f"{'MODULE'.ljust(20)}\t{'# PARAM'.rjust(10)}\tSHAPE")
@@ -1654,7 +1650,7 @@ if __name__ == '__main__':
 	group.add_argument('-c','--cpu-profile',default=None,nargs=1,help="CPU PyTorch profiler on a batch")
 	group.add_argument('-g','--gpu-profile',default=None,nargs=1,help="GPU PyTorch profiler on a batch")
 	group.add_argument('-G','--gpu-memory',default=None,nargs=1,help="GPU Memory check 1 batch")
-	parser.add_argument('-b','--batch',default=[32],nargs=1,help="Batch size")
+	parser.add_argument('-b','--batch',default=[4],nargs=1,help="Batch size")
 	args = parser.parse_args()
 
 	if args.print:
