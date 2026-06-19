@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
 all_models = [
 	"UNet1_1","UNet1_2","UNet1_3","UNet1_4","UNet2_1","UNet2_2","UNet2_3",
@@ -1186,11 +1187,11 @@ class UNet6_1(nn.Module):
 
 		# ENCODER -- needs an embedding conv to join block input to output
 		down_op_params = {'kernel_size':3,'stride':2,'padding':1,'bias':False}
-		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=1,padding=1)
-		self.encoder_1 = ConvBlock6(32,32)
-		self.encoder_2 = ConvBlock6(64,64)
-		self.encoder_3 = ConvBlock6(128,128)
-		self.encoder_4 = ConvBlock6(256,256)
+		self.embedding = nn.Conv2d(in_channels,32,kernel_size=3,stride=1,padding=1) #256x256
+		self.encoder_1 = ConvBlock6(32,32) #256x256
+		self.encoder_2 = ConvBlock6(64,64) #128x128 
+		self.encoder_3 = ConvBlock6(128,128) #64x64
+		self.encoder_4 = ConvBlock6(256,256) #32x32
 		self.down_op_1 = nn.Conv2d(32,64,**down_op_params)
 		self.down_op_2 = nn.Conv2d(64,128,**down_op_params)
 		self.down_op_3 = nn.Conv2d(128,256,**down_op_params)
@@ -1216,21 +1217,21 @@ class UNet6_1(nn.Module):
 
 	def forward(self,x):
 		# ENCODER
-		x = self.embedding(x)
-		enc_1 = self.encoder_1(x)
-		enc_2 = self.encoder_2(self.down_op_1(enc_1))
-		enc_3 = self.encoder_3(self.down_op_2(enc_2))
-		enc_4 = self.encoder_4(self.down_op_3(enc_3))
+		x = self.embedding(x) #256
+		enc_1 = self.encoder_1(x) #128
+		enc_2 = self.encoder_2(self.down_op_1(enc_1)) #64
+		enc_3 = self.encoder_3(self.down_op_2(enc_2)) #32
+		enc_4 = self.encoder_4(self.down_op_3(enc_3)) #16
 		
 		#BOTTLENECK
-		enc_5 = self.bottleneck(self.down_op_4(enc_4))
+		enc_5 = self.bottleneck(self.down_op_4(enc_4)) #16
 		
 		# DECODER
-		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1))
-		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1))
-		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1))
-		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1))
-		dec_0 = self.out_layer(dec_1)
+		dec_4 = self.decoder_4(torch.cat([enc_4,self.up_op_4(enc_5)],dim=1)) #32
+		dec_3 = self.decoder_3(torch.cat([enc_3,self.up_op_3(dec_4)],dim=1)) #64
+		dec_2 = self.decoder_2(torch.cat([enc_2,self.up_op_2(dec_3)],dim=1)) #128
+		dec_1 = self.decoder_1(torch.cat([enc_1,self.up_op_1(dec_2)],dim=1)) #256
+		dec_0 = self.out_layer(dec_1) #256
 		return dec_0
 
 
@@ -1240,34 +1241,59 @@ class UNet6_1(nn.Module):
 class MultiHeadSelfAttention(nn.Module):
 	'''
 	MHSA layer
-	D: embedding dimensino
-	H: nr heads
+	B: batch dimension
+	E: embedding dimensino
+	N: sequence length
+	H: head dimension
 	'''
-	def __init__(self, D, H):
+	def __init__(self, E, num_heads=4):
 		super().__init__()
-		assert D % H == 0
-		self.D = D
-		self.H = H
-		self.head_dim = D // H
-		self.qkv  = nn.Linear(D, D * 3)
-		self.proj = nn.Linear(D, D)
+		assert E % num_heads == 0
+		self.E = E
+		self.num_heads = num_heads
+		self.H = E // num_heads
+		self.W_qkv  = nn.Linear(E, E * 3, bias=False)
+		self.W_o = nn.Linear(E, E, bias=False)
 
 	def forward(self, x):
-		B, N, D = x.shape
-		qkv = self.qkv(x)  # (B, N, 3D)
-		qkv = qkv.reshape(B, N, 3, self.H, self.head_dim)
-		qkv = qkv.permute(2,0,3,1,4)
-		q, k, v = qkv[0], qkv[1], qkv[2]
+		B, N, _ = x.shape
+		QKV = self.W_qkv(x)  # (B, N, 3E)
+		Q,K,V = QKV.chunk(3,dim=-1) # each [B,N,E]
+		Q = Q.view(B,N,self.num_heads,self.head_dim).transpose(1,2) # [B,num_heads,N,H]
+		K = K.view(B,N,self.num_heads,self.head_dim).transpose(1,2)
+		V = V.view(B,N,self.num_heads,self.head_dim).transpose(1,2)
 
-		attn = (q @ k.transpose(-2, -1))
-		attn = attn / (self.head_dim ** 0.5)
+		attn = (Q @ K.transpose(-2, -1)) # [B,num_heads,N,N]
+		attn = attn / (self.H ** 0.5)
 		attn = attn.softmax(dim=-1)
 
-		out = attn @ v
-		out = out.transpose(1, 2)
-		out = out.reshape(B, N, D)
+		x = attn @ V # [B,num_heads,N,H]
+		x = x.transpose(1, 2).reshape(B,N,self.E) #[B,num_heads,N,H] -> [B,N,num_heads,H] -> [B,N,E]
+		return self.W_o(x) # [B,N,E]
 
-		return self.proj(out)
+
+class MultiHeadCrossAttention(nn.Module): #<<< option?
+	def __init__(self, d_model, num_heads, dropout=0.1):
+		super().__init__()
+		assert d_model % num_heads == 0
+		self.num_heads = num_heads
+		self.head_dim  = d_model // num_heads
+		self.W_q       = nn.Linear(d_model, d_model, bias=False)
+		self.W_kv      = nn.Linear(d_model, 2 * d_model, bias=False)
+		self.W_out     = nn.Linear(d_model, d_model, bias=False)
+		self.dropout   = nn.Dropout(dropout)
+
+	def forward(self, x, enc_out, mask=None):
+		B, N, _ = x.shape
+		S        = enc_out.size(1)
+		Q        = self.W_q(x).view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+		K, V     = self.W_kv(enc_out).chunk(2, dim=-1)
+		K        = K.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
+		V        = V.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
+		x        = F.scaled_dot_product_attention(Q, K, V, attn_mask=mask,
+		                                          dropout_p=self.dropout.p if self.training else 0.0)
+		x = x.transpose(1, 2).contiguous().view(B, N, -1)
+		return self.W_out(x)
 
 
 class MLP(nn.Module):
@@ -1291,12 +1317,12 @@ class EncoderAttentionLayer(nn.Module):
 	'''
 	A complete ViT layer (i.e. MHSA + MLP)
 	'''
-	def __init__(self,D,H,mlp_ratio=4):
+	def __init__(self,E,num_heads=4,mlp_ratio=4):
 		super().__init__()
-		self.norm1 = nn.LayerNorm(D)
-		self.attn  = MultiHeadSelfAttention(D,H)
-		self.norm2 = nn.LayerNorm(D)
-		self.mlp   = MLP(D, mlp_ratio)
+		self.norm1 = nn.LayerNorm(E)
+		self.attn  = MultiHeadSelfAttention(E,num_heads)
+		self.norm2 = nn.LayerNorm(E)
+		self.mlp   = MLP(E, mlp_ratio)
 
 	def forward(self, x):
 		x = x + self.attn(self.norm1(x))
@@ -1308,19 +1334,14 @@ class TransformerStage(nn.Module):
 	'''
 	'Block' grouping multiple MHSA ops. Equivalent to 'convolutional' block in CNNs above. 
 	'''
-	def __init__(self,E,depth,num_heads,H,W):
+	def __init__(self,E,depth,num_heads):
 		super().__init__()
-		self.layers = nn.ModuleList([EncoderAttentionLayer(D,H) for _ in range(depth)])
-		self.pos_embedding = nn.Parameter(torch.randn(1,H*W,dim) * 0.02)
-		self.downsample = PatchMerging(D)
+		self.layers = nn.ModuleList([EncoderAttentionLayer(E,num_heads) for _ in range(depth)])
 
-	def forward(self,x,H,W):
-		x = x + self.pos_embedding
+	def forward(self,x):
 		for layer in self.layers:
 			x = layer(x)
-		skip = x #to decoder
-		x, H, W = self.downsample(x,H,W)
-		return x,skip,H,W
+		return x
 
 
 class PatchEmbedding(nn.Module):
@@ -1345,9 +1366,10 @@ class PatchEmbedding(nn.Module):
 		return x
 
 
-class PatchMerging(nn.Module):
+class SpatialDownsample(nn.Module):
 	'''
 	Spatial resolution downsampler. Checkerboard pattern.
+	Halves height and width, doubles channels
 	'''
 	def __init__(self, dim):
 		super().__init__()
@@ -1377,29 +1399,113 @@ class PatchMerging(nn.Module):
 		return x, H, W	
 
 
-class PatchMergingConv(nn.Module):
+class SpatialDownsampleConv(nn.Module):
 	'''
 	Spatial resolution downsampling. Strided convolution.
+	Halves height and width, doubles channels.
 	'''
-	def __init__(self,dim):
+	def __init__(self,E_in,H,W):
 		super().__init__()
-		self.projector = nn.Conv2d(in_channels=dim,out_channels=2*dim,kernel_size=2,stride=2)
-		# self.norm      = nn.BatchNorm2d(2*dim)
+		self.H = H
+		self.W = W
+		self.E_in = E_in
+		self.conv = nn.Conv2d(in_channels=E_in,out_channels=2*E_in,kernel_size=3,stride=2,padding=1)
+		self.gelu = nn.GELU()
+		self.norm = nn.LayerNorm(2*E_in)
 
-	def forward(self,x,H,W):
-		B,N,E = x.shape
-		x = x.view(B,H,W,E).permute(0,3,1,2) #->[B,C,H,W]
-		x = self.projector(x)
-		# x = self.norm(x)
-		_,new_C,new_H,new_W = x.shape
-		x = x.flatten(2).transpose(1,2) # [B,N,E]
-		return x, new_H, new_W
+
+	def forward(self,x):
+		B,N,_ = x.shape
+		x = x.view(B,self.H,self.W,self.E_in).permute(0,3,1,2) #->[B,C,H,W]
+		x = self.gelu(self.conv(x))
+		x = x.flatten(2).transpose(1,2) # [B,N,2E]
+		x = self.norm(x)
+		return x
+
+
+class SpatialUpsampleConv(nn.Module):
+	def __init__(self,E_in,H,W):
+		super().__init__()
+		self.H = H
+		self.W = W
+		self.E_in = E_in
+
+		self.conv = nn.ConvTransposed2d(E_in,E_in//2,kernel_size=4,stride=2,padding=1)
+		self.gelu = nn.GELU()
+		self.norm = nn.LayerNorm(E_in//2)
+
+	def forward(self,x):
+		B,N,_ = x.shape
+		x = x.transpose(1,2).view(B,self.E_in,self.H,self.W)
+		x = self.gelu(self.conv(x))
+		x = x.flatten(2).transpose(1,2) # [B,N,E/2]
+		x = self.norm(x)
+		return x
+
+class LearnedPositionalEncoding2D(nn.Module):
+	'''
+	Learned positional encoding of size E.
+	'''
+	def __init__(self, E, num_patches, dropout=0.1):
+		super().__init__()
+		self.dropout = nn.Dropout(dropout)
+		self.pe      = nn.Embedding(num_patches, E) #flat embedding
+
+	def forward(self, x):
+		B, N, _ = x.shape
+		positions = torch.arange(N, device=x.device).unsqueeze(0)  # [1, N]
+		x = x + self.pe(positions)                                 # [B, N, E]
+		return self.dropout(x)
+
+
+class SinusoidalPositionalEncoding2D(nn.Module):
+	'''
+	Fixed positional encoding (not learned). 2-dimensional sinusoidal.
+	'''
+	def __init__(self, E, num_patches_h, num_patches_w, dropout=0.1):
+		super().__init__()
+		assert E % 2 == 0, "Embedding dimension not divisible by 2"
+		E_half = E // 2  # half for rows, half for cols
+
+		self.dropout = nn.Dropout(dropout)
+
+		# position indices for rows and cols
+		row_pos = torch.arange(num_patches_h).unsqueeze(1) # [N_h, 1]
+		col_pos = torch.arange(num_patches_w).unsqueeze(1) # [N_w, 1]
+
+		div = torch.exp(torch.arange(0, E_half, 2) * -(math.log(10000.0) / E_half))  # [E_half/2,]: 16
+
+		# row encoding: (num_patches_h, E_half)
+		row_enc = torch.zeros(num_patches_h, E_half) #[64,E/2], id est [N_h,E/2]
+		row_enc[:, 0::2] = torch.sin(row_pos * div)
+		row_enc[:, 1::2] = torch.cos(row_pos * div)
+
+		# col encoding: (num_patches_w, E_half)
+		col_enc = torch.zeros(num_patches_w, E_half) #[64,E/2]
+		col_enc[:, 0::2] = torch.sin(col_pos * div)
+		col_enc[:, 1::2] = torch.cos(col_pos * div)
+
+		# expand and concatenate over full grid
+		# row_enc: (H, W, E_half) by repeating across W
+		# col_enc: (H, W, E_half) by repeating across H
+		row_enc = row_enc.unsqueeze(1).expand(-1, num_patches_w, -1)  #[H, W, E_half]
+		col_enc = col_enc.unsqueeze(0).expand(num_patches_h, -1, -1)  #[H, W, E_half]
+
+		# concatenate along last dim → (H, W, E)
+		pe = torch.cat([row_enc, col_enc], dim=-1)
+		pe = pe.view(1, num_patches_h * num_patches_w, E) #[1, N, E]
+		self.register_buffer('pe', pe)
+
+
+	def forward(self, x):
+		x = x + self.pe
+		return self.dropout(x)
 
 
 class AttentionEncoder(nn.Module):
 	'''
 	N: Sequence length
-	D: Embedding size
+	E: Embedding size
 	H: Head dimensions
 	'''
 
@@ -1410,13 +1516,13 @@ class AttentionEncoder(nn.Module):
 		self.patch_embed = PatchEmbedding(img_size=256,patch_size=4,in_channels=in_channels,embed_dim=64)
 		self.stage1 = TransformerStage(E=64,depth=2,num_heads=4)
 		self.merge1 = PatchMerging(64)
-		self.stage2 = TransformerStage(D=128,depth=2,num_heads=4)
+		self.stage2 = TransformerStage(E=128,depth=2,num_heads=4)
 		self.merge2 = PatchMerging(128)
-		self.stage3 = TransformerStage(D=256,depth=2,num_heads=4)
+		self.stage3 = TransformerStage(E=256,depth=2,num_heads=4)
 		self.merge3 = PatchMerging(256)
-		self.stage4 = TransformerStage(D=512,depth=2,num_heads=4)
+		self.stage4 = TransformerStage(E=512,depth=2,num_heads=4)
 		self.merge4 = PatchMerging(512)
-		self.stage5 = TransformerStage(D=1024,depth=2,num_heads=4)	
+		self.stage5 = TransformerStage(E=1024,depth=2,num_heads=4)	
 
 	def forward(self,x):
 		x, H, W = self.patch_embed(x) #64x64
@@ -1464,6 +1570,22 @@ class AttentionDecoder(nn.Module):
 ################################################################################
 # COMBINED UNETS 
 ################################################################################
+class ConvolutionConvolution(nn.Module): #<<<< ADD
+	def __init__(self,model_id,in_channels=3,out_channels=2):
+		super().__init__()
+		self.model_name = 'Conv-Conv-UNet'
+		self.model_id   = model_id #int
+
+		self.Encoder = None
+		self.Decoder = None
+
+
+	def forward(self,x):
+		x = self.Encoder(x)
+		x = self.Decoder(x)
+		return x
+
+
 class ConvolutionAttention(nn.Module):
 	def __init__(self,N,D,H):
 		'''
@@ -1484,8 +1606,8 @@ class AttentionConvolution(nn.Module):
 	'''
 	def __init__(self,N,D,H):
 		super(AttentionConvolution,self).__init__()
-
 		self.Encoder = AttentionEncoder(N,D,H)
+		self.Decoder = None
 
 	def forward(self,x):
 		return x
@@ -1497,12 +1619,12 @@ class AttentionAttention(nn.Module):
 	'''
 	def __init__(self,N,D,H):
 		super(AttentionAttention,self).__init__()
+		self.Encoder = AttentionEncoder(N)
 
 	def forward(self,x):
 		return x
 
-		
-# CNN encoding and decoding: UNet6_1
+
 
 ################################################################################
 # LOSSES
@@ -1520,7 +1642,7 @@ class EdgeWeightedLoss(nn.Module):
 		return loss
 
 ################################################################################
-# OTHER/UTILITIES/TESTING
+# OTHER/UTILITIES/CHECK MODELS
 ################################################################################
 def batch_cpu_profiler(data_iter,model_str):
 	'''
